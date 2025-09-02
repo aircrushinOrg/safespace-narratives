@@ -154,11 +154,13 @@ export class PreloadScene extends Phaser.Scene {
       </svg>
     `));
 
-    // Interaction prompt
+    // Interaction prompt (without emoji to avoid encoding issues)
     this.load.image('interaction-bubble', 'data:image/svg+xml;base64,' + btoa(`
       <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
         <circle cx="16" cy="12" r="12" fill="#ffffff" stroke="#333" stroke-width="2"/>
-        <text x="16" y="17" text-anchor="middle" fill="#333" font-size="16">💬</text>
+        <circle cx="12" cy="10" r="1.5" fill="#333"/>
+        <circle cx="16" cy="10" r="1.5" fill="#333"/>
+        <circle cx="20" cy="10" r="1.5" fill="#333"/>
         <path d="M 16 24 L 12 28 L 20 28 Z" fill="#ffffff" stroke="#333" stroke-width="2"/>
       </svg>
     `));
