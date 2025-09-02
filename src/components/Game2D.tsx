@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
+import campusBackground from '@/assets/campus-background.jpg';
+import treeImage from '@/assets/tree.png';
 
 interface Position {
   x: number;
@@ -205,24 +207,48 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
 
         {/* Game Area */}
         <Card className="relative overflow-hidden" style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}>
-          {/* Background */}
+          {/* Background Image */}
           <div 
-            className="absolute inset-0 bg-gradient-to-br from-green-100 to-blue-100"
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: `
-                radial-gradient(circle at 25% 25%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)
-              `
+              backgroundImage: `url(${campusBackground})`,
+              filter: 'brightness(0.9) contrast(1.1)'
             }}
           />
+          
+          {/* Overlay for better contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-transparent to-background/20" />
+          
+          {/* Animated floating elements */}
+          <div className="absolute inset-0">
+            {/* Floating leaves animation */}
+            <div className="absolute top-10 left-20 w-4 h-4 bg-green-400/30 rounded-full animate-bounce" 
+                 style={{ animationDelay: '0s', animationDuration: '3s' }} />
+            <div className="absolute top-32 right-40 w-3 h-3 bg-yellow-400/30 rounded-full animate-bounce" 
+                 style={{ animationDelay: '1s', animationDuration: '4s' }} />
+            <div className="absolute bottom-40 left-60 w-5 h-5 bg-green-300/30 rounded-full animate-bounce" 
+                 style={{ animationDelay: '2s', animationDuration: '3.5s' }} />
+                 
+            {/* Decorative trees */}
+            <div className="absolute bottom-20 right-20 w-16 h-20 opacity-80">
+              <img src={treeImage} alt="Tree" className="w-full h-full object-cover rounded-lg shadow-lg" />
+            </div>
+            <div className="absolute bottom-32 left-32 w-12 h-16 opacity-70">
+              <img src={treeImage} alt="Tree" className="w-full h-full object-cover rounded-lg shadow-md transform scale-75" />
+            </div>
+            
+            {/* Campus pathways */}
+            <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-stone-400/40 to-transparent" />
+            <div className="absolute bottom-16 left-1/4 w-1/2 h-8 bg-stone-300/30 rounded-full transform rotate-12" />
+          </div>
 
-          {/* Grid overlay */}
+          {/* Subtle grid overlay for game feel */}
           <div 
-            className="absolute inset-0 opacity-20"
+            className="absolute inset-0 opacity-10"
             style={{
               backgroundImage: `
-                linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
               `,
               backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`
             }}
