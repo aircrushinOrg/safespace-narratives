@@ -158,21 +158,21 @@ export class PreloadScene extends Phaser.Scene {
     const npcs = [
       { name: 'alex', color: '#DEB887', hair: '#8B4513', outfit: '#228B22' },
       { name: 'jamie', color: '#F0C987', hair: '#4B0082', outfit: '#FF6B6B' },
-      { name: 'taylor', color: '#FFB3D9', hair: '#FF69B4', outfit: '#FF1493' },
+      { name: 'taylor', color: '#FFDBAC', hair: '#FF69B4', outfit: '#9932CC' },
       { name: 'riley', color: '#98FB98', hair: '#32CD32', outfit: '#32CD32' }
     ];
 
     npcs.forEach(npc => {
-      const sprite = 'data:image/svg+xml;base64,' + btoa(`
-        <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="16" cy="10" r="6" fill="${npc.color}"/>
-          <rect x="10" y="16" width="12" height="16" fill="${npc.outfit}" rx="2"/>
+      const sprite = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
+        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="10" r="6" fill="${npc.color}" stroke="#333" stroke-width="0.5"/>
+          <rect x="10" y="16" width="12" height="16" fill="${npc.outfit}" rx="2" stroke="#333" stroke-width="0.5"/>
           <circle cx="13" cy="8" r="1" fill="#333"/>
           <circle cx="19" cy="8" r="1" fill="#333"/>
           <path d="M 12 12 Q 16 15 20 12" stroke="#333" stroke-width="1" fill="none"/>
           <ellipse cx="16" cy="6" rx="7" ry="3" fill="${npc.hair}"/>
         </svg>
-      `);
+      `)}`;
       this.load.image(`npc-${npc.name}`, sprite);
     });
   }
