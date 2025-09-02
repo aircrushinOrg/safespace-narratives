@@ -266,12 +266,41 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenarioId, onBack
 
       {/* Input Area */}
       <div className="border-t border-border p-4 bg-card">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* Quick Response Options */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInput("I want to make sure we're both safe and comfortable.")}
+              className="text-xs text-left justify-start h-auto py-2"
+            >
+              💡 "I want to make sure we're both safe and comfortable."
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInput("Let's discuss protection and what we're both comfortable with.")}
+              className="text-xs text-left justify-start h-auto py-2"
+            >
+              🛡️ "Let's discuss protection and boundaries."
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInput("Maybe we should slow down and get to know each other better first.")}
+              className="text-xs text-left justify-start h-auto py-2"
+            >
+              ⏸️ "Maybe we should take things slower."
+            </Button>
+          </div>
+          
+          {/* Custom Input */}
           <div className="flex space-x-2">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your response..."
+              placeholder="Type your own response or click a suggestion above..."
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
               className="flex-1"
             />
@@ -279,8 +308,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenarioId, onBack
               <Send className="w-4 h-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            💡 Remember: You're in control. Smart choices keep you safe.
+          
+          <p className="text-xs text-muted-foreground text-center">
+            💡 You can use the suggestions above or type your own response. Remember: You're in control. Smart choices keep you safe.
           </p>
         </div>
       </div>

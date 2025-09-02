@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GameScenario, scenarios } from './GameScenario';
 import { Game2D } from './Game2D';
-import { ScenarioGame } from './ScenarioGame';
+import { ChatInterface } from './ChatInterface';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BookOpen, Shield, Users, Target, Gamepad2 } from 'lucide-react';
@@ -37,7 +37,7 @@ export const STIEducationGame: React.FC = () => {
 
   if (gameState === 'scenario' && selectedScenario) {
     return (
-      <ScenarioGame 
+      <ChatInterface 
         scenarioId={selectedScenario} 
         onBack={handleBackToGame}
       />
