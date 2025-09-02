@@ -90,8 +90,9 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ onApiKeySet }) => 
         </div>
         
         <p className="text-sm text-blue-700 mb-4">
-          Enter your Deepseek API key to enable AI-powered conversations. 
-          Your key is stored locally and never sent to our servers.
+          Enter your DeepSeek API key to enable AI-powered conversations.
+          You can also set <code>VITE_DEEPSEEK_API_KEY</code> in a <code>.env</code> file.
+          The key entered here is stored locally and never sent to our servers.
         </p>
         
         <div className="flex gap-2">

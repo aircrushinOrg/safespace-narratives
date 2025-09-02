@@ -501,18 +501,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startScenario(npc: NPC): void {
-    // Switch to conversation scene instead of callback
-    const conversationData = {
-      scenarioId: npc.scenarioId,
-      npcName: npc.npcName,
-      npcSprite: npc.scenarioId.split('-')[0], // alex, jamie, taylor, riley
-      setting: this.getScenarioSetting(npc.scenarioId)
-    };
-    
-    this.scene.start('ConversationScene', { 
-      conversationData,
-      scenarioCallback: this.scenarioCallback 
-    });
+    // Switch to AI conversation instead of scripted conversation
+    if (this.scenarioCallback) {
+      this.scenarioCallback(npc.scenarioId);
+    }
   }
 
   private getScenarioSetting(scenarioId: string): string {

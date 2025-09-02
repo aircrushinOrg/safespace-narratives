@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Send, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { DeepseekApi } from '@/services/deepseekApi';
-import { ApiKeyManager } from '@/components/ApiKeyManager';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -63,6 +62,22 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Use API key from environment variables
+  useEffect(() => {
+    const envKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+    
+    if (envKey && typeof envKey === 'string' && envKey.trim().length > 0) {
+      setApiKey(envKey.trim());
+    } else {
+      console.error('VITE_DEEPSEEK_API_KEY environment variable is not set or empty');
+      toast({
+        title: "Configuration Error",
+        description: "API key not found in environment variables. Please restart the dev server after setting your .env file.",
+        variant: "destructive"
+      });
+    }
+  }, []);
 
   const initializeConversation = async (deepseekApi: DeepseekApi) => {
     setIsLoading(true);
@@ -203,16 +218,17 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
             Back to Game
           </Button>
           
-          <ApiKeyManager onApiKeySet={setApiKey} />
-          
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">AI-Powered Conversation</h2>
+            <h2 className="text-xl font-semibold mb-4">Configuration Required</h2>
             <p className="text-gray-600 mb-4">
               You're about to enter <strong>{conversationData.setting}</strong> with <strong>{conversationData.npcName}</strong>.
             </p>
             <p className="text-sm text-gray-500">
-              Please connect your Deepseek API key above to start the AI conversation.
+              Please set <code>VITE_DEEPSEEK_API_KEY</code> in your <code>.env</code> file to enable AI conversations.
             </p>
+            <div className="mt-4 p-3 bg-gray-100 rounded text-sm font-mono">
+              VITE_DEEPSEEK_API_KEY=your_api_key_here
+            </div>
           </Card>
         </div>
       </div>
@@ -297,13 +313,43 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
               </div>
               
               {!conversationEnded && (
-                <div className="p-4 border-t">
+                <div className="p-4 border-t space-y-3">
+                  {/* Quick suggestions to guide healthy communication */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUserInput("I want to make sure we're both safe and comfortable.")}
+                      className="text-xs text-left justify-start h-auto py-2"
+                      disabled={isLoading}
+                    >
+                      💡 "I want to make sure we're both safe and comfortable."
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUserInput("Let's discuss protection and what we're both comfortable with.")}
+                      className="text-xs text-left justify-start h-auto py-2"
+                      disabled={isLoading}
+                    >
+                      🛡️ "Let's discuss protection and boundaries."
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUserInput("Maybe we should slow down and get to know each other better first.")}
+                      className="text-xs text-left justify-start h-auto py-2"
+                      disabled={isLoading}
+                    >
+                      ⏸️ "Maybe we should take things slower."
+                    </Button>
+                  </div>
                   <div className="flex gap-2">
                     <Input
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Type your message..."
+                      placeholder="Type your message or choose a suggestion..."
                       disabled={isLoading}
                       className="flex-1"
                     />
@@ -312,6 +358,13 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                       disabled={!userInput.trim() || isLoading}
                     >
                       <Send className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleEndConversation()}
+                      disabled={isLoading}
+                    >
+                      End & Evaluate
                     </Button>
                   </div>
                 </div>

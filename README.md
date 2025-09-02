@@ -32,9 +32,32 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Set up environment variables for AI conversations.
+cp .env.example .env
+# Edit .env and add your DeepSeek API key:
+# VITE_DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+
+## AI-Powered Conversations
+
+This application features AI-powered conversations for sexual health education scenarios. To enable these conversations:
+
+1. **Get a DeepSeek API key**: Visit [DeepSeek Platform](https://platform.deepseek.com/) and create an account to get your API key.
+
+2. **Set up environment variable**: Create a `.env` file in the project root and add:
+   ```
+   VITE_DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   ```
+
+3. **How it works**: 
+   - Walk around the 2D campus game
+   - Approach NPCs (Alex, Jamie, Taylor, Riley) 
+   - Press SPACE/ENTER to interact
+   - This triggers an AI conversation where you can type your own responses
+   - The AI evaluates your conversation for sexual health education goals
 
 **Edit a file directly in GitHub**
 
@@ -71,3 +94,17 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## DeepSeek Chat Setup
+
+This app supports real conversational testing using DeepSeek.
+
+- Env file (recommended for local dev): create a `.env` at the project root and set
+
+  ```
+  VITE_DEEPSEEK_API_KEY=your_key_here
+  ```
+
+- In‑app fallback: if the env var is not present, the app shows an API key input and stores the key in `localStorage` only.
+
+Security note: Frontend env vars are embedded in the bundle and visible to clients. For production, use a server proxy to keep secrets server‑side.
