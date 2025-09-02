@@ -123,3 +123,20 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Walking animation keyframe */
+  @keyframes walk {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  /* Animation classes */
+  .animate-walk {
+    animation: walk 0.6s ease-in-out infinite;
+  }
+}

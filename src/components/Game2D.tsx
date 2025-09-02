@@ -36,6 +36,8 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
   const [currentNPC, setCurrentNPC] = useState<NPC | null>(null);
   const [keys, setKeys] = useState<Set<string>>(new Set());
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+  const [playerDirection, setPlayerDirection] = useState<'left' | 'right' | 'up' | 'down'>('down');
+  const [isMoving, setIsMoving] = useState(false);
 
   const npcs: NPC[] = [
     {
@@ -111,11 +113,30 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
     setPlayerPosition(prev => {
       let newX = prev.x;
       let newY = prev.y;
+      let hasMovement = false;
 
-      if (keys.has('ArrowLeft') || keys.has('a')) newX -= MOVE_SPEED;
-      if (keys.has('ArrowRight') || keys.has('d')) newX += MOVE_SPEED;
-      if (keys.has('ArrowUp') || keys.has('w')) newY -= MOVE_SPEED;
-      if (keys.has('ArrowDown') || keys.has('s')) newY += MOVE_SPEED;
+      if (keys.has('ArrowLeft') || keys.has('a')) {
+        newX -= MOVE_SPEED;
+        setPlayerDirection('left');
+        hasMovement = true;
+      }
+      if (keys.has('ArrowRight') || keys.has('d')) {
+        newX += MOVE_SPEED;
+        setPlayerDirection('right');
+        hasMovement = true;
+      }
+      if (keys.has('ArrowUp') || keys.has('w')) {
+        newY -= MOVE_SPEED;
+        setPlayerDirection('up');
+        hasMovement = true;
+      }
+      if (keys.has('ArrowDown') || keys.has('s')) {
+        newY += MOVE_SPEED;
+        setPlayerDirection('down');
+        hasMovement = true;
+      }
+
+      setIsMoving(hasMovement);
 
       // Keep player within bounds
       newX = Math.max(16, Math.min(GAME_WIDTH - 16, newX));
@@ -179,6 +200,34 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
     if (currentNPC && onScenarioSelect) {
       onScenarioSelect(currentNPC.scenarioId);
       setIsDialogOpen(false);
+    }
+  };
+
+  const getPlayerSprite = () => {
+    if (!isMoving) {
+      switch (playerDirection) {
+        case 'left':
+        case 'right':
+          return '🧍';
+        case 'up':
+          return '🧍';
+        case 'down':
+          return '🧍';
+        default:
+          return '🧍';
+      }
+    } else {
+      switch (playerDirection) {
+        case 'left':
+        case 'right':
+          return '🚶';
+        case 'up':
+          return '🚶';
+        case 'down':
+          return '🚶';
+        default:
+          return '🚶';
+      }
     }
   };
 
@@ -274,13 +323,16 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
 
           {/* Player */}
           <div
-            className="absolute text-3xl select-none transition-all duration-75 z-10"
+            className={`absolute text-3xl select-none transition-all duration-75 z-10 ${
+              isMoving ? 'animate-walk' : ''
+            }`}
             style={{
               left: playerPosition.x - 16,
-              top: playerPosition.y - 16
+              top: playerPosition.y - 16,
+              transform: `${playerDirection === 'left' ? 'scaleX(-1)' : 'scaleX(1)'}`
             }}
           >
-            🚶
+            {getPlayerSprite()}
           </div>
 
           {/* Interaction indicator */}
