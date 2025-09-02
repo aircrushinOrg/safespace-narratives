@@ -158,8 +158,9 @@ export class GameScene extends Phaser.Scene {
 
     // Set up dialog callback
     this.dialogManager.onScenarioStart = (scenarioId: string) => {
-      if (this.scenarioCallback) {
-        this.scenarioCallback(scenarioId);
+      const npc = this.npcs.find(n => n.scenarioId === scenarioId);
+      if (npc) {
+        this.startScenario(npc);
       }
     };
   }
@@ -224,6 +225,31 @@ export class GameScene extends Phaser.Scene {
 
   public setScenarioCallback(callback?: (scenarioId: string) => void): void {
     this.scenarioCallback = callback;
+  }
+
+  private startScenario(npc: NPC): void {
+    // Switch to conversation scene instead of callback
+    const conversationData = {
+      scenarioId: npc.scenarioId,
+      npcName: npc.npcName,
+      npcSprite: npc.scenarioId.split('-')[0], // alex, jamie, taylor, riley
+      setting: this.getScenarioSetting(npc.scenarioId)
+    };
+    
+    this.scene.start('ConversationScene', { 
+      conversationData,
+      scenarioCallback: this.scenarioCallback 
+    });
+  }
+
+  private getScenarioSetting(scenarioId: string): string {
+    const settings = {
+      'college-party': 'College Party',
+      'travel-romance': 'Bangkok Night Market', 
+      'relationship-milestone': 'Cozy Home',
+      'dating-app': 'Coffee Shop'
+    };
+    return settings[scenarioId as keyof typeof settings] || 'Unknown Location';
   }
 
   update(): void {
