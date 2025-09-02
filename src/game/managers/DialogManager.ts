@@ -7,6 +7,7 @@ export class DialogManager {
   private currentNPC?: NPC;
   private currentIndex: number = 0;
   private isDialogActive: boolean = false;
+  private keyboardControls?: { enter: Phaser.Input.Keyboard.Key; esc: Phaser.Input.Keyboard.Key };
   
   public onScenarioStart?: (scenarioId: string) => void;
 
@@ -23,6 +24,7 @@ export class DialogManager {
 
     this.createDialogBox();
     this.updateDialogContent();
+    this.setupKeyboardControls();
   }
 
   private createDialogBox(): void {
@@ -188,8 +190,46 @@ export class DialogManager {
     this.closeDialog();
   }
 
+  private setupKeyboardControls(): void {
+    if (!this.scene.input.keyboard) return;
+
+    this.keyboardControls = {
+      enter: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
+      esc: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+    };
+
+    // Set up key event listeners
+    this.keyboardControls.enter.on('down', () => {
+      if (this.isDialogActive) {
+        const isLastDialog = this.currentIndex >= (this.currentNPC?.dialogue.length || 0) - 1;
+        if (isLastDialog) {
+          this.startScenario();
+        } else {
+          this.nextDialog();
+        }
+      }
+    });
+
+    this.keyboardControls.esc.on('down', () => {
+      if (this.isDialogActive) {
+        this.closeDialog();
+      }
+    });
+  }
+
+  private cleanupKeyboardControls(): void {
+    if (this.keyboardControls) {
+      this.keyboardControls.enter.removeAllListeners();
+      this.keyboardControls.esc.removeAllListeners();
+      this.keyboardControls = undefined;
+    }
+  }
+
   private closeDialog(): void {
     if (!this.dialogContainer) return;
+
+    // Cleanup keyboard controls
+    this.cleanupKeyboardControls();
 
     // Exit animation
     this.scene.tweens.add({
