@@ -335,8 +335,8 @@ export class GameScene extends Phaser.Scene {
       },
       {
         name: 'Taylor',
-        x: width * 0.19,
-        y: height * 0.67,
+        x: width * 0.75,
+        y: height * 0.35,
         scenarioId: 'relationship-milestone',
         sprite: 'taylor',
         dialogue: [
@@ -347,8 +347,8 @@ export class GameScene extends Phaser.Scene {
       },
       {
         name: 'Riley',
-        x: width * 0.69,
-        y: height * 0.75,
+        x: width * 0.75,
+        y: height * 0.65,
         scenarioId: 'dating-app',
         sprite: 'riley',
         dialogue: [
