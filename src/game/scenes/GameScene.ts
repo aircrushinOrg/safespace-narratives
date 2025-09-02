@@ -17,7 +17,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.setupWorld();
+    // Set world bounds to screen size
+    const { width, height } = this.sys.game.canvas;
+    this.physics.world.setBounds(0, 0, width, height);
+
+    // Background scaled to screen
+    const bg = this.add.image(width / 2, height / 2, 'campus-bg');
+    bg.setDisplaySize(width, height);
+
+    // Add atmospheric elements
+    this.createAtmosphere();
+    
     this.createPlayer();
     this.createNPCs();
     this.setupManagers();
@@ -25,22 +35,12 @@ export class GameScene extends Phaser.Scene {
     this.createUI();
   }
 
-  private setupWorld(): void {
-    // Set world bounds
-    this.physics.world.setBounds(0, 0, 800, 600);
-
-    // Background
-    const bg = this.add.image(400, 300, 'campus-bg');
-    bg.setDisplaySize(800, 600);
-
-    // Add atmospheric elements
-    this.createAtmosphere();
-  }
-
   private createAtmosphere(): void {
-    // Trees
-    const tree1 = this.add.image(680, 520, 'tree').setScale(0.8).setDepth(1);
-    const tree2 = this.add.image(180, 480, 'tree').setScale(0.6).setDepth(1);
+    const { width, height } = this.sys.game.canvas;
+    
+    // Trees positioned relative to screen size
+    const tree1 = this.add.image(width * 0.85, height * 0.87, 'tree').setScale(0.8).setDepth(1);
+    const tree2 = this.add.image(width * 0.225, height * 0.8, 'tree').setScale(0.6).setDepth(1);
 
     // Floating particles with physics
     const particles = this.add.particles(0, 0, 'tree', {
@@ -51,7 +51,7 @@ export class GameScene extends Phaser.Scene {
       frequency: 500,
       emitZone: {
         type: 'random',
-        source: new Phaser.Geom.Rectangle(0, 0, 800, 100)
+        source: new Phaser.Geom.Rectangle(0, 0, width, height * 0.17)
       }
     });
 
@@ -69,17 +69,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPlayer(): void {
-    this.player = new Player(this, 400, 500);
+    const { width, height } = this.sys.game.canvas;
+    this.player = new Player(this, width / 2, height * 0.83);
     this.add.existing(this.player);
     this.physics.add.existing(this.player);
   }
 
   private createNPCs(): void {
+    const { width, height } = this.sys.game.canvas;
+    
     const npcData = [
       {
         name: 'Alex',
-        x: 200,
-        y: 200,
+        x: width * 0.25,
+        y: height * 0.33,
         scenarioId: 'college-party',
         sprite: 'alex',
         dialogue: [
@@ -90,8 +93,8 @@ export class GameScene extends Phaser.Scene {
       },
       {
         name: 'Jamie',
-        x: 600,
-        y: 150,
+        x: width * 0.75,
+        y: height * 0.25,
         scenarioId: 'travel-romance',
         sprite: 'jamie',
         dialogue: [
@@ -102,8 +105,8 @@ export class GameScene extends Phaser.Scene {
       },
       {
         name: 'Taylor',
-        x: 150,
-        y: 400,
+        x: width * 0.19,
+        y: height * 0.67,
         scenarioId: 'relationship-milestone',
         sprite: 'taylor',
         dialogue: [
@@ -114,8 +117,8 @@ export class GameScene extends Phaser.Scene {
       },
       {
         name: 'Riley',
-        x: 550,
-        y: 450,
+        x: width * 0.69,
+        y: height * 0.75,
         scenarioId: 'dating-app',
         sprite: 'riley',
         dialogue: [
@@ -191,7 +194,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createUI(): void {
-    // Mini-map (optional)
+    const { width, height } = this.sys.game.canvas;
+    
+    // Mini-map (positioned relative to screen)
     const miniMap = this.add.graphics();
     miniMap.fillStyle(0x000000, 0.5);
     miniMap.fillRect(20, 20, 150, 100);
@@ -204,10 +209,18 @@ export class GameScene extends Phaser.Scene {
 
     // Update minimap
     this.events.on('postupdate', () => {
-      const mapX = 20 + (this.player.x / 800) * 150;
-      const mapY = 20 + (this.player.y / 600) * 100;
+      const mapX = 20 + (this.player.x / width) * 150;
+      const mapY = 20 + (this.player.y / height) * 100;
       playerDot.setPosition(mapX, mapY);
     });
+    
+    // Add fullscreen instructions
+    const instructions = this.add.text(width / 2, height - 30, 'Use WASD or Arrow Keys to move • Press SPACE/ENTER to interact with NPCs', {
+      fontSize: '16px',
+      color: '#ffffff',
+      backgroundColor: '#000000aa',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5).setDepth(100);
   }
 
   private getNearbyNPC(): NPC | null {

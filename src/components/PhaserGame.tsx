@@ -1,8 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
 import { gameConfig } from '@/game/config/GameConfig';
 
 interface PhaserGameProps {
@@ -17,10 +14,16 @@ export const PhaserGame: React.FC<PhaserGameProps> = ({ onBack, onScenarioSelect
   useEffect(() => {
     if (!gameRef.current) return;
 
-    // Update config with parent element
+    // Update config with parent element and fullscreen dimensions
     const config = {
       ...gameConfig,
-      parent: gameRef.current
+      parent: gameRef.current,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scale: {
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+      }
     };
 
     phaserGameRef.current = new Phaser.Game(config);
@@ -36,7 +39,17 @@ export const PhaserGame: React.FC<PhaserGameProps> = ({ onBack, onScenarioSelect
     // Wait for scene to be created
     setTimeout(setupCallback, 3000);
 
+    // Handle window resize
+    const handleResize = () => {
+      if (phaserGameRef.current) {
+        phaserGameRef.current.scale.resize(window.innerWidth, window.innerHeight);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       if (phaserGameRef.current) {
         phaserGameRef.current.destroy(true);
         phaserGameRef.current = null;
@@ -45,39 +58,12 @@ export const PhaserGame: React.FC<PhaserGameProps> = ({ onBack, onScenarioSelect
   }, [onScenarioSelect]);
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button variant="outline" size="sm" onClick={onBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Menu
-            </Button>
-            <h1 className="text-xl font-bold">STI Education Campus</h1>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Use WASD or arrow keys to move • Space/Enter to interact
-          </div>
-        </div>
-
-        {/* Game Container */}
-        <Card className="overflow-hidden p-0">
-          <div 
-            ref={gameRef} 
-            className="w-full h-full"
-            id="phaser-game"
-            style={{ minHeight: '600px' }}
-          />
-        </Card>
-
-        {/* Instructions */}
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Walk around the campus and interact with NPCs to start educational scenarios.
-          </p>
-        </div>
-      </div>
+    <div className="fixed inset-0 w-full h-full bg-black">
+      <div 
+        ref={gameRef} 
+        className="w-full h-full"
+        id="phaser-game"
+      />
     </div>
   );
 };

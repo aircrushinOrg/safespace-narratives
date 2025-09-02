@@ -17,8 +17,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private createLoadingBar(): void {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const { width, height } = this.sys.game.canvas;
 
     // Loading bar background
     this.loadingBar = this.add.graphics();
@@ -30,19 +29,21 @@ export class PreloadScene extends Phaser.Scene {
 
     // Loading text
     this.add.text(width / 2, height / 2 - 50, 'Loading Assets...', {
-      fontSize: '20px',
+      fontSize: `${Math.min(width, height) / 30}px`,
       color: '#ffffff'
     }).setOrigin(0.5);
   }
 
   private setupLoadingEvents(): void {
     this.load.on('progress', (value: number) => {
+      const { width, height } = this.sys.game.canvas;
+      
       this.progressBar.clear();
       this.progressBar.fillStyle(0x4A90E2);
       this.progressBar.fillRect(
-        this.cameras.main.width / 4 + 5,
-        this.cameras.main.height / 2 - 15,
-        (this.cameras.main.width / 2 - 10) * value,
+        width / 4 + 5,
+        height / 2 - 15,
+        (width / 2 - 10) * value,
         30
       );
     });

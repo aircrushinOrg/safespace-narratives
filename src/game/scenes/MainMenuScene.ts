@@ -8,27 +8,26 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const { width, height } = this.sys.game.canvas;
 
     // Background
     this.add.rectangle(width / 2, height / 2, width, height, 0x2c5530);
 
     // Title
-    const title = this.add.text(width / 2, 150, 'STI Education Campus', {
+    const title = this.add.text(width / 2, height * 0.25, 'STI Education Campus', {
       fontSize: '48px',
       fontStyle: 'bold',
       color: '#ffffff'
     }).setOrigin(0.5);
 
     // Subtitle
-    this.add.text(width / 2, 220, 'Interactive Learning Game', {
+    this.add.text(width / 2, height * 0.37, 'Interactive Learning Game', {
       fontSize: '24px',
       color: '#cccccc'
     }).setOrigin(0.5);
 
     // Start button
-    const startButton = this.add.text(width / 2, 350, 'Start Game', {
+    const startButton = this.add.text(width / 2, height * 0.58, 'Start Game', {
       fontSize: '32px',
       color: '#ffffff',
       backgroundColor: '#4A90E2',
@@ -61,7 +60,7 @@ export class MainMenuScene extends Phaser.Scene {
       });
 
     // Instructions
-    this.add.text(width / 2, 450, 'Use WASD or Arrow Keys to move\nPress SPACE or ENTER to interact with NPCs', {
+    this.add.text(width / 2, height * 0.75, 'Use WASD or Arrow Keys to move\nPress SPACE or ENTER to interact with NPCs', {
       fontSize: '16px',
       color: '#cccccc',
       align: 'center'

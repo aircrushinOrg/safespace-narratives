@@ -44,6 +44,8 @@ export class ConversationScene extends Phaser.Scene {
   }
 
   private createBackground(): void {
+    const { width, height } = this.sys.game.canvas;
+    
     // Create dynamic background based on scenario
     const backgrounds = {
       'college-party': { color: 0x2a1810, overlay: 0x4a2820 },
@@ -54,23 +56,25 @@ export class ConversationScene extends Phaser.Scene {
 
     const bgData = backgrounds[this.conversationData.scenarioId as keyof typeof backgrounds] || backgrounds['college-party'];
     
-    // Background gradient
-    const bgRect = this.add.rectangle(400, 300, 800, 600, bgData.color);
+    // Background gradient scaled to screen
+    const bgRect = this.add.rectangle(width / 2, height / 2, width, height, bgData.color);
     
     // Add atmospheric elements
     this.createAtmosphere();
     
     // Overlay for depth
-    const overlay = this.add.rectangle(400, 300, 800, 600, bgData.overlay, 0.3);
+    const overlay = this.add.rectangle(width / 2, height / 2, width, height, bgData.overlay, 0.3);
   }
 
   private createAtmosphere(): void {
+    const { width, height } = this.sys.game.canvas;
+    
     // Add floating particles for atmosphere
     const particleCount = 15;
     for (let i = 0; i < particleCount; i++) {
       const particle = this.add.circle(
-        Phaser.Math.Between(0, 800),
-        Phaser.Math.Between(0, 600),
+        Phaser.Math.Between(0, width),
+        Phaser.Math.Between(0, height),
         Phaser.Math.Between(1, 3),
         0xffffff,
         0.1
@@ -90,14 +94,16 @@ export class ConversationScene extends Phaser.Scene {
   }
 
   private createCharacters(): void {
+    const { width, height } = this.sys.game.canvas;
+    
     // Player sprite (left side)
-    this.playerSprite = this.add.sprite(150, 400, 'player-idle-0');
+    this.playerSprite = this.add.sprite(width * 0.19, height * 0.67, 'player-idle-0');
     this.playerSprite.setScale(3);
     this.playerSprite.setDepth(10);
 
     // NPC sprite (right side)  
     const npcKey = `npc-${this.conversationData.npcSprite}`;
-    this.npcSprite = this.add.sprite(650, 400, npcKey);
+    this.npcSprite = this.add.sprite(width * 0.81, height * 0.67, npcKey);
     this.npcSprite.setScale(3);
     this.npcSprite.setDepth(10);
 
@@ -113,14 +119,14 @@ export class ConversationScene extends Phaser.Scene {
     });
 
     // Add name labels
-    this.add.text(150, 480, 'You', {
+    this.add.text(this.playerSprite.x, this.playerSprite.y + 60, 'You', {
       fontSize: '16px',
       color: '#ffffff',
       backgroundColor: '#000000aa',
       padding: { x: 8, y: 4 }
     }).setOrigin(0.5);
 
-    this.add.text(650, 480, this.conversationData.npcName, {
+    this.add.text(this.npcSprite.x, this.npcSprite.y + 60, this.conversationData.npcName, {
       fontSize: '16px', 
       color: '#ffffff',
       backgroundColor: '#000000aa',
@@ -129,12 +135,15 @@ export class ConversationScene extends Phaser.Scene {
   }
 
   private createDialogUI(): void {
-    // Main dialog container
-    this.dialogBox = this.add.container(400, 520);
+    const { width, height } = this.sys.game.canvas;
+    
+    // Main dialog container positioned at bottom
+    this.dialogBox = this.add.container(width / 2, height * 0.87);
     this.dialogBox.setDepth(100);
 
-    // Dialog background with animated border
-    const dialogBg = this.add.rectangle(0, 0, 750, 140, 0x000000, 0.9);
+    // Dialog background with animated border - sized for screen
+    const dialogWidth = Math.min(width * 0.9, 750);
+    const dialogBg = this.add.rectangle(0, 0, dialogWidth, 140, 0x000000, 0.9);
     dialogBg.setStrokeStyle(3, 0x4A90E2, 1);
     
     // Add subtle glow animation to border
@@ -148,17 +157,17 @@ export class ConversationScene extends Phaser.Scene {
     });
 
     // NPC name display
-    this.npcNameText = this.add.text(-360, -50, this.conversationData.npcName, {
+    this.npcNameText = this.add.text(-dialogWidth / 2 + 20, -50, this.conversationData.npcName, {
       fontSize: '18px',
       fontStyle: 'bold',
       color: '#4A90E2'
     });
 
     // Dialog text with typewriter effect
-    this.dialogText = this.add.text(-360, -20, '', {
+    this.dialogText = this.add.text(-dialogWidth / 2 + 20, -20, '', {
       fontSize: '16px',
       color: '#ffffff',
-      wordWrap: { width: 700, useAdvancedWrap: true }
+      wordWrap: { width: dialogWidth - 40, useAdvancedWrap: true }
     });
 
     // Options container
@@ -168,11 +177,11 @@ export class ConversationScene extends Phaser.Scene {
 
     // Animate dialog box entrance
     this.dialogBox.setAlpha(0);
-    this.dialogBox.setY(600);
+    this.dialogBox.setY(height);
     this.tweens.add({
       targets: this.dialogBox,
       alpha: 1,
-      y: 520,
+      y: height * 0.87,
       duration: 500,
       ease: 'Back.easeOut'
     });

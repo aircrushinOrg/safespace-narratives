@@ -18,20 +18,22 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    // Show logo
-    const logo = this.add.image(400, 200, 'logo').setScale(2);
+    const { width, height } = this.sys.game.canvas;
+
+    // Show logo scaled to screen
+    const logo = this.add.image(width / 2, height * 0.33, 'logo').setScale(Math.min(width, height) / 400);
     
     // Add loading text
-    const loadingText = this.add.text(400, 350, 'Loading...', {
-      fontSize: '24px',
+    const loadingText = this.add.text(width / 2, height * 0.58, 'Loading...', {
+      fontSize: `${Math.min(width, height) / 25}px`,
       color: '#ffffff'
     }).setOrigin(0.5);
 
     // Animate logo
     this.tweens.add({
       targets: logo,
-      scaleX: 2.2,
-      scaleY: 2.2,
+      scaleX: logo.scaleX * 1.1,
+      scaleY: logo.scaleY * 1.1,
       duration: 1000,
       yoyo: true,
       repeat: -1,
