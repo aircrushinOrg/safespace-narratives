@@ -95,6 +95,11 @@ export class NPC extends Phaser.GameObjects.Sprite {
   }
 
   public update(): void {
+    // Check if scene and game are available before accessing delta
+    if (!this.scene || !this.scene.game || !this.scene.game.loop) {
+      return;
+    }
+    
     this.idleTimer += this.scene.game.loop.delta;
     
     if (this.idleTimer >= this.idleInterval) {

@@ -526,11 +526,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(): void {
+    // Only update if scene is active
+    if (!this.scene.isActive('GameScene')) {
+      return;
+    }
+    
     this.player.update();
     this.inputManager.update();
     
     this.npcs.forEach(npc => {
-      npc.update();
+      if (npc && npc.scene) {
+        npc.update();
+      }
     });
   }
 }
