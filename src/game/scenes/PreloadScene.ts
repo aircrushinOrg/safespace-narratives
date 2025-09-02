@@ -132,16 +132,22 @@ export class PreloadScene extends Phaser.Scene {
     const legY = legOffset ? 26 : 24;
     const legHeight = legOffset ? 8 : 6;
     
-    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
-      <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    return 'data:image/svg+xml;base64,' + btoa(`
+      <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
         <g transform="scale(${scale})">
+          <!-- Head -->
           <circle cx="16" cy="10" r="6" fill="${skinColor}"/>
+          <!-- Eyes -->
           <circle cx="13" cy="8" r="1" fill="#333"/>
           <circle cx="19" cy="8" r="1" fill="#333"/>
+          <!-- Smile -->
           <path d="M 12 12 Q 16 15 20 12" stroke="#333" stroke-width="1" fill="none"/>
+          <!-- Body -->
           <rect x="10" y="16" width="12" height="14" fill="#4A90E2" rx="2"/>
+          <!-- Legs -->
           <rect x="12" y="${legY}" width="3" height="${legHeight}" fill="${skinColor}"/>
           <rect x="17" y="${legY}" width="3" height="${legHeight}" fill="${skinColor}"/>
+          <!-- Hair -->
           <ellipse cx="16" cy="6" rx="7" ry="3" fill="#8B4513"/>
         </g>
       </svg>
@@ -157,8 +163,8 @@ export class PreloadScene extends Phaser.Scene {
     ];
 
     npcs.forEach(npc => {
-      const sprite = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
-        <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      const sprite = 'data:image/svg+xml;base64,' + btoa(`
+        <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
           <circle cx="16" cy="10" r="6" fill="${npc.color}"/>
           <rect x="10" y="16" width="12" height="16" fill="${npc.outfit}" rx="2"/>
           <circle cx="13" cy="8" r="1" fill="#333"/>
@@ -173,16 +179,16 @@ export class PreloadScene extends Phaser.Scene {
 
   private createUIElements(): void {
     // Dialog box background
-    this.load.image('dialog-bg', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
-      <svg width="400" height="150" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 150">
+    this.load.image('dialog-bg', 'data:image/svg+xml;base64,' + btoa(`
+      <svg width="400" height="150" xmlns="http://www.w3.org/2000/svg">
         <rect width="400" height="150" fill="#000000" fill-opacity="0.8" rx="10"/>
         <rect width="396" height="146" x="2" y="2" fill="none" stroke="#ffffff" stroke-width="2" rx="8"/>
       </svg>
     `));
 
-    // Interaction prompt
-    this.load.image('interaction-bubble', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
-      <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    // Interaction prompt (without emoji to avoid encoding issues)
+    this.load.image('interaction-bubble', 'data:image/svg+xml;base64,' + btoa(`
+      <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
         <circle cx="16" cy="12" r="12" fill="#ffffff" stroke="#333" stroke-width="2"/>
         <circle cx="12" cy="10" r="1.5" fill="#333"/>
         <circle cx="16" cy="10" r="1.5" fill="#333"/>
