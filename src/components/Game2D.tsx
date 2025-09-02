@@ -207,24 +207,26 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
     if (!isMoving) {
       switch (playerDirection) {
         case 'left':
+          return '🧍';
         case 'right':
           return '🧍';
         case 'up':
-          return '🧍';
+          return '🧍‍♂️';
         case 'down':
-          return '🧍';
+          return '🧍‍♀️';
         default:
           return '🧍';
       }
     } else {
       switch (playerDirection) {
         case 'left':
+          return '🏃';
         case 'right':
-          return '🚶';
+          return '🏃';
         case 'up':
-          return '🚶';
+          return '🏃‍♂️';
         case 'down':
-          return '🚶';
+          return '🏃‍♀️';
         default:
           return '🚶';
       }
@@ -323,8 +325,12 @@ export const Game2D: React.FC<Game2DProps> = ({ onBack, onScenarioSelect }) => {
 
           {/* Player */}
           <div
-            className={`absolute text-3xl select-none transition-all duration-75 z-10 ${
-              isMoving ? 'animate-walk' : ''
+            className={`absolute text-3xl select-none transition-all duration-150 z-10 ${
+              isMoving ? (
+                playerDirection === 'left' || playerDirection === 'right' ? 'animate-walk-horizontal' :
+                playerDirection === 'up' ? 'animate-walk-up' :
+                playerDirection === 'down' ? 'animate-walk-down' : 'animate-walk'
+              ) : ''
             }`}
             style={{
               left: playerPosition.x - 16,
