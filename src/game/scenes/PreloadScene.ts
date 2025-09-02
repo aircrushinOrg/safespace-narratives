@@ -214,10 +214,8 @@ export class PreloadScene extends Phaser.Scene {
     // Create animations after loading
     this.createAnimations();
     
-    // Transition to main menu
-    this.time.delayedCall(1000, () => {
-      this.scene.start('MainMenuScene');
-    });
+    // Transition to main menu immediately after loading
+    this.scene.start('MainMenuScene');
   }
 
   private createAnimations(): void {

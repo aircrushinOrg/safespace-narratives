@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 export class Player extends Phaser.GameObjects.Sprite {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: any;
-  private speed: number = 150;
+  private speed: number = 260;
   private isMoving: boolean = false;
   private footstepTimer: number = 0;
   private readonly footstepInterval: number = 400;

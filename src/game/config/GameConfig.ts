@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { BootScene } from '../scenes/BootScene';
 import { PreloadScene } from '../scenes/PreloadScene';
 import { MainMenuScene } from '../scenes/MainMenuScene';
 import { GameScene } from '../scenes/GameScene';
@@ -16,7 +15,8 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
       debug: false
     }
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, GameScene, ConversationScene],
+  // Start directly at PreloadScene to skip splash/loading page
+  scene: [PreloadScene, MainMenuScene, GameScene, ConversationScene],
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -24,7 +24,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     height: '100%'
   },
   render: {
-    pixelArt: false,
-    antialias: true
+    pixelArt: true,
+    antialias: false
   }
 };

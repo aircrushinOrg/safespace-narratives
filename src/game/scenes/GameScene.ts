@@ -35,105 +35,199 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createStyledCampusBackground(width: number, height: number): void {
-    // Enhanced magical sky gradient
-    const bg = this.add.graphics();
-    bg.fillGradientStyle(0xFF6B9D, 0xFF6B9D, 0x4ECDC4, 0x45B7D1);
-    bg.fillRect(0, 0, width, height);
+    // Pixel-art campus: grass, paths with shifted intersections, and buildings
+    const tile = 16;
+    const cols = Math.ceil(width / tile);
+    const rows = Math.ceil(height / tile);
 
-    // Add subtle animated rays of light
-    for (let i = 0; i < 6; i++) {
-      const ray = this.add.graphics();
-      ray.fillStyle(0xFFFFFF, 0.1);
-      ray.fillRect(-5, 0, 10, height);
-      ray.setPosition(width * (i / 5), 0);
-      ray.setRotation(Math.PI / 12);
-      
-      this.tweens.add({
-        targets: ray,
-        alpha: { from: 0.1, to: 0.3 },
-        duration: 3000 + i * 500,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
+    const g = this.add.graphics();
+    g.setDepth(-100);
+
+    const grassPalette = [0x2f6b2f, 0x2a5a27, 0x356f34];
+    const dirtPalette = [0x8b5a2b, 0x7a4b23, 0xa47148];
+
+    // Path layout: two horizontals and two verticals (moved intersections)
+    const hRows = [Math.floor(rows * 0.35), Math.floor(rows * 0.65)];
+    const vCols = [Math.floor(cols * 0.25), Math.floor(cols * 0.75)];
+    const pathThickness = 3; // tiles
+
+    // Central quad ring (rectangular walkway around green)
+    const quad = {
+      left: Math.floor(cols * 0.42),
+      right: Math.floor(cols * 0.58),
+      top: Math.floor(rows * 0.44),
+      bottom: Math.floor(rows * 0.56),
+      t: 2
+    };
+
+    const isOnQuadRing = (c: number, r: number) => (
+      (c >= quad.left && c <= quad.right && (Math.abs(r - quad.top) <= quad.t || Math.abs(r - quad.bottom) <= quad.t)) ||
+      (r >= quad.top && r <= quad.bottom && (Math.abs(c - quad.left) <= quad.t || Math.abs(c - quad.right) <= quad.t))
+    );
+
+    const isPath = (c: number, r: number) => {
+      const inH = hRows.some(hr => r >= hr - pathThickness && r <= hr + pathThickness);
+      const inV = vCols.some(vc => c >= vc - pathThickness && c <= vc + pathThickness);
+      return inH || inV || isOnQuadRing(c, r);
+    };
+
+    // Paint ground tiles
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = c * tile;
+        const y = r * tile;
+        if (isPath(c, r)) {
+          g.fillStyle(dirtPalette[(c + r) % dirtPalette.length], 1);
+          g.fillRect(x, y, tile, tile);
+        } else {
+          g.fillStyle(grassPalette[(c + r) % grassPalette.length], 1);
+          g.fillRect(x, y, tile, tile);
+        }
+      }
     }
 
-    // Campus lawn with enhanced colors and texture
-    const lawn = this.add.graphics();
-    lawn.fillGradientStyle(0x32CD32, 0x32CD32, 0x228B22, 0x006400);
-    lawn.fillRect(0, height * 0.65, width, height * 0.35);
-    
-    // Add magical grass texture with sparkles
-    lawn.fillStyle(0x90EE90, 0.4);
-    for (let i = 0; i < 30; i++) {
-      lawn.fillCircle(
-        Math.random() * width,
-        height * 0.7 + Math.random() * height * 0.25,
-        3 + Math.random() * 8
-      );
+    // Path edge highlights
+    const edge = this.add.graphics();
+    edge.setDepth(-95);
+    edge.fillStyle(0xC2A386, 0.5);
+    for (let r = 1; r < rows - 1; r++) {
+      for (let c = 1; c < cols - 1; c++) {
+        if (!isPath(c, r)) continue;
+        const x = c * tile;
+        const y = r * tile;
+        if (!isPath(c - 1, r)) edge.fillRect(x, y, 2, tile); // left
+        if (!isPath(c + 1, r)) edge.fillRect(x + tile - 2, y, 2, tile); // right
+        if (!isPath(c, r - 1)) edge.fillRect(x, y, tile, 2); // top
+        if (!isPath(c, r + 1)) edge.fillRect(x, y + tile - 2, tile, 2); // bottom
+      }
     }
 
-    // Enhanced pathway system with glowing edges
-    const paths = this.add.graphics();
-    paths.fillGradientStyle(0xF4A460, 0xF4A460, 0xDEB887, 0xD2B48C);
-    
-    // Central main path (horizontal) with curves
-    paths.fillRoundedRect(0, height * 0.45, width, height * 0.1, 5);
-    
-    // Vertical connecting paths with rounded edges
-    paths.fillRoundedRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6, 5);
-    paths.fillRoundedRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5, 5);
-    paths.fillRoundedRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55, 5);
-    
-    // Add glowing path borders
-    paths.lineStyle(3, 0xFFE4B5, 0.8);
-    paths.strokeRoundedRect(0, height * 0.45, width, height * 0.1, 5);
-    paths.strokeRoundedRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6, 5);
-    paths.strokeRoundedRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5, 5);
-    paths.strokeRoundedRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55, 5);
+    // More realistic pixel buildings with borders, roofs, doors, windows, shadows
+    const drawBuilding = (cx: number, cy: number, wTiles: number, hTiles: number, base: number, roof: number, window: number) => {
+      const bx = cx * tile;
+      const by = cy * tile;
+      const bw = wTiles * tile;
+      const bh = hTiles * tile;
 
-    // Enhanced path intersections with magical glow
-    paths.fillGradientStyle(0xFFD700, 0xFFD700, 0xF4A460, 0xF4A460);
-    paths.fillCircle(width * 0.25, height * 0.5, 18);
-    paths.fillCircle(width * 0.5, height * 0.5, 18);
-    paths.fillCircle(width * 0.75, height * 0.5, 18);
+      // Determine entrance side by nearest path row/col
+      const centerCol = cx + Math.floor(wTiles / 2);
+      const centerRow = cy + Math.floor(hTiles / 2);
+      const nearestH = hRows.reduce((prev, hr) => Math.abs(hr - centerRow) < Math.abs(prev - centerRow) ? hr : prev, hRows[0]);
+      const nearestV = vCols.reduce((prev, vc) => Math.abs(vc - centerCol) < Math.abs(prev - centerCol) ? vc : prev, vCols[0]);
+      const distH = Math.abs(nearestH - centerRow);
+      const distV = Math.abs(nearestV - centerCol);
+      const entrance: 'north' | 'south' | 'west' | 'east' = distH < distV ? (nearestH < centerRow ? 'north' : 'south') : (nearestV < centerCol ? 'west' : 'east');
 
-    // Add intersection sparkle effects
-    for (let i = 0; i < 3; i++) {
-      const intersectionX = width * (0.25 + i * 0.25);
-      const sparkle = this.add.graphics();
-      sparkle.fillStyle(0xFFFFFF, 0.8);
-      sparkle.fillCircle(0, 0, 2);
-      sparkle.setPosition(intersectionX, height * 0.5);
-      
-      this.tweens.add({
-        targets: sparkle,
-        scale: { from: 1, to: 2 },
-        alpha: { from: 0.8, to: 0 },
-        duration: 1500,
-        repeat: -1,
-        delay: i * 500
-      });
-    }
+      const b = this.add.graphics();
+      b.setDepth(-90);
 
-    // Enhanced decorative campus trees
-    for (let i = 0; i < 10; i++) {
-      const treeX = width * 0.1 + (i / 9) * width * 0.8;
-      const treeY = height * 0.7 + Math.random() * height * 0.1;
-      this.createMagicalCampusTree(treeX, treeY, i);
-    }
+      // Drop shadow (bottom-right)
+      b.fillStyle(0x000000, 0.25);
+      b.fillRect(bx + 2, by + 2, bw, bh);
 
-    // Enhanced benches with magical glow
-    this.createEnhancedBench(width * 0.15, height * 0.5);
-    this.createEnhancedBench(width * 0.35, height * 0.5);
-    this.createEnhancedBench(width * 0.65, height * 0.5);
-    this.createEnhancedBench(width * 0.85, height * 0.5);
+      // Main body
+      b.fillStyle(base, 1);
+      b.fillRect(bx, by, bw, bh);
 
-    // Enhanced lamp posts with magical lighting
-    for (let i = 0; i < 4; i++) {
-      const lampX = width * 0.15 + i * width * 0.25;
-      const lampY = height * 0.4;
-      this.createMagicalLampPost(lampX, lampY, i);
+      // Border outline
+      const border = 0x1a1a1a;
+      b.fillStyle(border, 1);
+      b.fillRect(bx, by, bw, 1); // top
+      b.fillRect(bx, by + bh - 1, bw, 1); // bottom
+      b.fillRect(bx, by, 1, bh); // left
+      b.fillRect(bx + bw - 1, by, 1, bh); // right
+
+      // Roof cap
+      b.fillStyle(roof, 1);
+      b.fillRect(bx + 1, by + 1, bw - 2, 3);
+      // Roof shading band
+      b.fillStyle(Phaser.Display.Color.IntegerToColor(roof).darken(10).color, 1);
+      b.fillRect(bx + 1, by + 4, bw - 2, 2);
+
+      // Windows grid (even spacing, margins)
+      const marginX = 6;
+      const marginY = 7;
+      const stepX = 12;
+      const stepY = 10;
+      b.fillStyle(window, 1);
+      for (let wy = by + marginY; wy < by + bh - marginY; wy += stepY) {
+        for (let wx = bx + marginX; wx < bx + bw - marginX; wx += stepX) {
+          b.fillRect(wx, wy, 4, 4);
+          // window sill
+          b.fillStyle(0x222222, 1);
+          b.fillRect(wx, wy + 4, 4, 1);
+          b.fillStyle(window, 1);
+        }
+      }
+
+      // Entrance door + steps on chosen side
+      const doorW = Math.max(6, Math.floor(bw * 0.12));
+      const doorColor = 0x3b2f2f;
+      const stepColor = 0xc2a386;
+      if (entrance === 'south') {
+        const dx = bx + Math.floor((bw - doorW) / 2);
+        const dy = by + bh - 9;
+        b.fillStyle(doorColor, 1); b.fillRect(dx, dy, doorW, 8);
+        b.fillStyle(stepColor, 1); b.fillRect(dx - 2, dy + 8, doorW + 4, 2);
+      } else if (entrance === 'north') {
+        const dx = bx + Math.floor((bw - doorW) / 2);
+        const dy = by + 3;
+        b.fillStyle(doorColor, 1); b.fillRect(dx, dy, doorW, 8);
+        b.fillStyle(stepColor, 1); b.fillRect(dx - 2, dy - 2, doorW + 4, 2);
+      } else if (entrance === 'west') {
+        const dx = bx + 2;
+        const dy = by + Math.floor(bh / 2) - 4;
+        b.fillStyle(doorColor, 1); b.fillRect(dx, dy, 8, 8);
+        b.fillStyle(stepColor, 1); b.fillRect(dx - 2, dy + 2, 2, 4);
+      } else { // east
+        const dx = bx + bw - 10;
+        const dy = by + Math.floor(bh / 2) - 4;
+        b.fillStyle(doorColor, 1); b.fillRect(dx, dy, 8, 8);
+        b.fillStyle(stepColor, 1); b.fillRect(dx + 8, dy + 2, 2, 4);
+      }
+
+      // Roof details: vents
+      b.fillStyle(0x2b2b2b, 1);
+      b.fillRect(bx + 6, by + 2, 3, 2);
+      b.fillRect(bx + bw - 9, by + 2, 3, 2);
+    };
+
+    // Place buildings around campus edges and near quad
+    drawBuilding(2, 2, Math.max(6, Math.floor(cols * 0.15)), Math.max(5, Math.floor(rows * 0.12)), 0x5b6d7a, 0x3e4a52, 0xcfe8ff); // Library TL
+    drawBuilding(cols - Math.max(8, Math.floor(cols * 0.18)) - 2, 2, Math.max(8, Math.floor(cols * 0.18)), Math.max(5, Math.floor(rows * 0.12)), 0x7a5b5b, 0x4e3a3a, 0xfff2cf); // Lab TR
+    drawBuilding(2, rows - Math.max(6, Math.floor(rows * 0.16)) - 2, Math.max(7, Math.floor(cols * 0.16)), Math.max(6, Math.floor(rows * 0.16)), 0x6b7a5b, 0x4a523e, 0xe8ffd1); // Dorm BL
+    drawBuilding(cols - Math.max(7, Math.floor(cols * 0.14)) - 2, rows - Math.max(6, Math.floor(rows * 0.15)) - 2, Math.max(7, Math.floor(cols * 0.14)), Math.max(6, Math.floor(rows * 0.15)), 0x5b5b7a, 0x3e3e4e, 0xdcdcff); // Admin BR
+
+    // Central hall near the quad (top side)
+    drawBuilding(Math.floor(cols * 0.44), Math.floor(rows * 0.40), Math.floor(cols * 0.12), 4, 0x7a6b5b, 0x4e3f33, 0xffe6cf);
+
+    // Quad fountain at center
+    const fx = Math.floor((quad.left + quad.right) / 2) * tile;
+    const fy = Math.floor((quad.top + quad.bottom) / 2) * tile;
+    const fountain = this.add.graphics();
+    fountain.setDepth(-91);
+    fountain.fillStyle(0x2e86c1, 1);
+    fountain.fillRect(fx - 8, fy - 8, 16, 16);
+    fountain.fillStyle(0xffffff, 0.6);
+    fountain.fillRect(fx - 2, fy - 6, 4, 12);
+
+    // Pixel bushes/trees sprinkled
+    const deco = this.add.graphics();
+    deco.setDepth(-92);
+    for (let i = 0; i < 20; i++) {
+      const cx = Math.floor(Math.random() * cols);
+      const cy = Math.floor(Math.random() * rows);
+      if (isPath(cx, cy)) continue;
+      const x = cx * tile;
+      const y = cy * tile;
+      // trunk
+      deco.fillStyle(0x5a3a1e, 1);
+      deco.fillRect(x + 6, y + 8, 4, 6);
+      // leaves
+      deco.fillStyle(0x2e8b57, 1);
+      deco.fillRect(x + 3, y + 3, 10, 7);
+      deco.fillStyle(0x3aa36c, 1);
+      deco.fillRect(x + 5, y + 5, 6, 4);
     }
   }
 
@@ -335,8 +429,9 @@ export class GameScene extends Phaser.Scene {
       },
       {
         name: 'Taylor',
-        x: width * 0.75,
-        y: height * 0.35,
+        // Move Taylor down-left of Alex and left of Riley
+        x: width * 0.15,
+        y: height * 0.50,
         scenarioId: 'relationship-milestone',
         sprite: 'taylor',
         dialogue: [
