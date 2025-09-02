@@ -9,7 +9,7 @@ import { BookOpen, Shield, Users, Target, Gamepad2 } from 'lucide-react';
 type GameState = 'menu' | 'game2d' | 'scenario';
 
 export const STIEducationGame: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>('menu');
+  const [gameState, setGameState] = useState<GameState>('game2d');
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
 
   const handleStart2DGame = () => {
@@ -22,7 +22,7 @@ export const STIEducationGame: React.FC = () => {
   };
 
   const handleBackToMenu = () => {
-    setGameState('menu');
+    setGameState('game2d');
     setSelectedScenario(null);
   };
 
