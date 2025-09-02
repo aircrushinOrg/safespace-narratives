@@ -46,24 +46,110 @@ export class ConversationScene extends Phaser.Scene {
   private createBackground(): void {
     const { width, height } = this.sys.game.canvas;
     
-    // Create dynamic background based on scenario
-    const backgrounds = {
-      'college-party': { color: 0x2a1810, overlay: 0x4a2820 },
-      'travel-romance': { color: 0x1a2a3a, overlay: 0x2a4a6a },
-      'relationship-milestone': { color: 0x2a1a2a, overlay: 0x4a3a4a },
-      'dating-app': { color: 0x1a1a2a, overlay: 0x3a3a4a }
-    };
-
-    const bgData = backgrounds[this.conversationData.scenarioId as keyof typeof backgrounds] || backgrounds['college-party'];
-    
-    // Background gradient scaled to screen
-    const bgRect = this.add.rectangle(width / 2, height / 2, width, height, bgData.color);
+    // Create detailed background based on scenario
+    switch(this.conversationData.scenarioId) {
+      case 'college-party':
+        this.createPartyBackground(width, height);
+        break;
+      case 'travel-romance':
+        this.createNightMarketBackground(width, height);
+        break;
+      case 'relationship-milestone':
+        this.createHomeBackground(width, height);
+        break;
+      case 'dating-app':
+        this.createCoffeeShopBackground(width, height);
+        break;
+      default:
+        this.createDefaultBackground(width, height);
+    }
     
     // Add atmospheric elements
     this.createAtmosphere();
+  }
+
+  private createPartyBackground(width: number, height: number): void {
+    // Dark party room with colored lights
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x1a1a2e, 0x1a1a2e, 0x16213e, 0x0f3460);
+    bg.fillRect(0, 0, width, height);
     
-    // Overlay for depth
-    const overlay = this.add.rectangle(width / 2, height / 2, width, height, bgData.overlay, 0.3);
+    // Party lights
+    for (let i = 0; i < 6; i++) {
+      const light = this.add.graphics();
+      const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0x96ceb4, 0xffeaa7];
+      light.fillStyle(colors[i % colors.length], 0.3);
+      light.fillCircle(
+        (i / 5) * width, 
+        height * 0.1, 
+        30 + Math.random() * 20
+      );
+      
+      this.tweens.add({
+        targets: light,
+        alpha: { from: 0.3, to: 0.7 },
+        duration: 1000 + Math.random() * 1000,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+  }
+
+  private createNightMarketBackground(width: number, height: number): void {
+    // Night sky with lanterns
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x2c3e50, 0x2c3e50, 0x34495e, 0x34495e);
+    bg.fillRect(0, 0, width, height);
+    
+    // Food stall lights
+    for (let i = 0; i < 4; i++) {
+      const lantern = this.add.graphics();
+      lantern.fillStyle(0xf39c12, 0.6);
+      lantern.fillRect((i / 3) * width - 20, height * 0.2, 40, 60);
+      lantern.fillStyle(0xe74c3c, 0.4);
+      lantern.fillRect((i / 3) * width - 15, height * 0.25, 30, 50);
+    }
+  }
+
+  private createHomeBackground(width: number, height: number): void {
+    // Warm cozy room
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x8b4513, 0x8b4513, 0x654321, 0x654321);
+    bg.fillRect(0, 0, width, height);
+    
+    // Warm lamp light
+    const lampLight = this.add.graphics();
+    lampLight.fillGradientStyle(0xffd700, 0xffd700, 0x8b4513, 0x8b4513, 0.5);
+    lampLight.fillCircle(width * 0.8, height * 0.3, 100);
+  }
+
+  private createCoffeeShopBackground(width: number, height: number): void {
+    // Coffee shop ambiance
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x6f4e37, 0x6f4e37, 0x8b7355, 0x8b7355);
+    bg.fillRect(0, 0, width, height);
+    
+    // Coffee steam effect
+    for (let i = 0; i < 3; i++) {
+      const steam = this.add.graphics();
+      steam.fillStyle(0xffffff, 0.1);
+      steam.fillCircle(width * 0.2 + i * 10, height * 0.6, 5);
+      
+      this.tweens.add({
+        targets: steam,
+        y: height * 0.3,
+        alpha: 0,
+        duration: 2000,
+        repeat: -1,
+        delay: i * 500
+      });
+    }
+  }
+
+  private createDefaultBackground(width: number, height: number): void {
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x2c5530, 0x2c5530, 0x1a3d1f, 0x1a3d1f);
+    bg.fillRect(0, 0, width, height);
   }
 
   private createAtmosphere(): void {

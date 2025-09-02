@@ -11,9 +11,40 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.createStyledBackground();
     this.createLoadingBar();
     this.setupLoadingEvents();
     this.loadAssets();
+  }
+
+  private createStyledBackground(): void {
+    const { width, height } = this.sys.game.canvas;
+    
+    // Create gradient background
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x2c5530, 0x2c5530, 0x1a3d1f, 0x1a3d1f);
+    bg.fillRect(0, 0, width, height);
+
+    // Add animated clouds
+    for (let i = 0; i < 5; i++) {
+      const cloudX = Math.random() * width;
+      const cloudY = Math.random() * height * 0.4;
+      const cloud = this.add.graphics();
+      cloud.fillStyle(0xffffff, 0.1);
+      cloud.fillCircle(0, 0, 20 + Math.random() * 10);
+      cloud.fillCircle(15, 0, 15 + Math.random() * 8);
+      cloud.fillCircle(-15, 0, 12 + Math.random() * 6);
+      cloud.setPosition(cloudX, cloudY);
+      
+      // Animate clouds
+      this.tweens.add({
+        targets: cloud,
+        x: cloudX + width,
+        duration: 15000 + Math.random() * 10000,
+        repeat: -1,
+        ease: 'Linear'
+      });
+    }
   }
 
   private createLoadingBar(): void {
