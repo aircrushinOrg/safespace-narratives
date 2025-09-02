@@ -375,17 +375,8 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-          <Button 
-            variant="outline" 
-            onClick={onBack}
-            className="shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Back to Game</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-16 gap-4">
 
           {conversationEnded && evaluation && (
             <Button 
@@ -400,9 +391,9 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
           )}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Chat Area */}
-          <div className="xl:col-span-2">
+          <div className="xl:col-span-3">
             <Card className="relative h-[72vh] sm:h-[78vh] min-h-[560px] flex flex-col border-2 border-black/10 shadow-[0_4px_0_0_rgba(0,0,0,0.05)]">
               <div className="relative p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
                 <div className="flex items-center gap-3 mb-3">
