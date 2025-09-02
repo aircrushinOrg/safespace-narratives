@@ -48,6 +48,91 @@ export class DeepseekApi {
     }
   }
 
+  async chatStream(
+    messages: DeepseekMessage[],
+    onToken: (token: string) => void,
+    signal?: AbortSignal
+  ): Promise<string> {
+    let fullText = '';
+    try {
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages,
+          temperature: 0.7,
+          max_tokens: 500,
+          stream: true,
+        }),
+        signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Streaming request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line) continue;
+          if (line === 'data: [DONE]') {
+            // End of stream
+            return fullText;
+          }
+          if (!line.startsWith('data:')) continue;
+          const json = line.replace(/^data:\s*/, '');
+          try {
+            const parsed = JSON.parse(json);
+            // OpenAI-compatible delta format
+            const delta = parsed?.choices?.[0]?.delta?.content ?? parsed?.choices?.[0]?.message?.content ?? '';
+            if (delta) {
+              fullText += delta;
+              onToken(delta);
+            }
+          } catch (e) {
+            // Ignore malformed chunks
+            continue;
+          }
+        }
+      }
+
+      // Flush any remaining buffer (non-standard servers)
+      try {
+        const parsed = JSON.parse(buffer.replace(/^data:\s*/, ''));
+        const last = parsed?.choices?.[0]?.delta?.content ?? parsed?.choices?.[0]?.message?.content ?? '';
+        if (last) {
+          fullText += last;
+          onToken(last);
+        }
+      } catch { /* empty */ }
+
+      return fullText;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        // Propagate abort so caller can handle gracefully
+        throw error;
+      }
+      console.error('Deepseek API stream error:', error);
+      throw new Error('Failed to stream AI response.');
+    }
+  }
+
   async evaluateScenario(
     scenarioType: string, 
     conversationHistory: Array<{ role: string; content: string }>,

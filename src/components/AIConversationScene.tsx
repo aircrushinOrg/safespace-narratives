@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Send, ArrowLeft, CheckCircle, XCircle, Square, Shield, Heart, AlertTriangle } from 'lucide-react';
 import { DeepseekApi } from '@/services/deepseekApi';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,6 +21,13 @@ interface ConversationData {
   setting: string;
 }
 
+interface Evaluation {
+  success: boolean;
+  score: number;
+  feedback: string;
+  summary: string;
+}
+
 interface AIConversationSceneProps {
   conversationData: ConversationData;
   onBack: () => void;
@@ -34,18 +41,121 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [conversationEnded, setConversationEnded] = useState(false);
-  const [evaluation, setEvaluation] = useState<any>(null);
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [api, setApi] = useState<DeepseekApi | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
-  const scenarioGoals = {
+  // Lightweight WebAudio synth for SFX
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const playSfx = (type: 'send' | 'tokenStart' | 'tokenEnd' | 'success' | 'error') => {
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const ctx = audioCtxRef.current!;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      let freq = 440;
+      if (type === 'send') freq = 520;
+      if (type === 'tokenStart') freq = 660;
+      if (type === 'tokenEnd') freq = 400;
+      if (type === 'success') freq = 740;
+      if (type === 'error') freq = 220;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.14);
+    } catch (error) {
+      // Ignore audio errors - they're not critical
+      console.debug('Audio playback failed:', error);
+    }
+  };
+
+  const trustScore = (() => {
+    const keywords = ['consent', 'boundary', 'boundaries', 'protection', 'condom', 'sti', 'testing', 'safe', 'comfort', 'birth control'];
+    const userTexts = messages.filter(m => m.role === 'user').map(m => m.content.toLowerCase()).join(' ');
+    const hits = keywords.reduce((acc, k) => acc + (userTexts.includes(k) ? 1 : 0), 0);
+    const normalized = Math.min(100, Math.round((hits / Math.max(4, keywords.length)) * 100));
+    return normalized;
+  })();
+
+  const rapportScore = (() => {
+    const pos = ['thank', 'appreciate', 'understand', 'comfortable', 'respect', 'listen', 'care', 'feel', 'glad'];
+    const text = messages.map(m => m.content.toLowerCase()).join(' ');
+    const hits = pos.reduce((acc, k) => acc + (text.includes(k) ? 1 : 0), 0);
+    return Math.min(100, Math.round((hits / 6) * 100));
+  })();
+
+  const riskScore = (() => {
+    const risk = ['drunk', 'alcohol', 'drink', 'party', 'unprotected', 'no condom', 'unsafe', 'random', 'tonight'];
+    const text = messages.map(m => m.content.toLowerCase()).join(' ');
+    const hits = risk.reduce((acc, k) => acc + (text.includes(k) ? 1 : 0), 0);
+    return Math.min(100, Math.round((hits / 6) * 100));
+  })();
+
+  const scenarioGoals = useMemo(() => ({
     'college-party': 'Practice discussing safety, consent, and responsible decision-making at parties',
     'travel-romance': 'Navigate health considerations and safety while traveling internationally', 
     'relationship-milestone': 'Communicate about STI testing, protection, and comfort levels in relationships',
     'dating-app': 'Discuss safety and getting to know someone from online dating'
+  }), []);
+
+  const suggestions = useMemo(() => [
+    "I want to make sure we're both safe and comfortable.",
+    "Let's discuss protection and what we're both comfortable with.",
+    "Maybe we should slow down and get to know each other better first."
+  ], []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const initializeConversation = useCallback(async (deepseekApi: DeepseekApi) => {
+    setIsLoading(true);
+    try {
+      const systemPrompt = deepseekApi.getScenarioSystemPrompt(conversationData.scenarioId, conversationData.npcName);
+      // Start with scenario banner, then stream the first AI line
+      const intro: Message = {
+        id: 'intro',
+        role: 'system',
+        content: `Scenario: ${scenarioGoals[conversationData.scenarioId as keyof typeof scenarioGoals]}`,
+        timestamp: new Date()
+      };
+      setMessages([intro, { id: 'ai-intro', role: 'assistant', content: '', timestamp: new Date() }]);
+      setIsStreaming(true);
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let first = true;
+      await deepseekApi.chatStream([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: 'Start the conversation naturally based on the scenario.' }
+      ], (token) => {
+        if (first) { playSfx('tokenStart'); first = false; }
+        setMessages(prev => prev.map(m => m.id === 'ai-intro' ? { ...m, content: m.content + token } : m));
+      }, controller.signal);
+      playSfx('tokenEnd');
+      setIsStreaming(false);
+    } catch (error: unknown) {
+      if ((error as Error)?.name !== 'AbortError') {
+        toast({
+          title: "Connection Error",
+          description: "Failed to start conversation. Please check your API key.",
+          variant: "destructive"
+        });
+        playSfx('error');
+      }
+    } finally {
+      setIsLoading(false);
+      abortRef.current = null;
+    }
+  }, [conversationData.scenarioId, conversationData.npcName, scenarioGoals, toast]);
 
   useEffect(() => {
     if (apiKey) {
@@ -53,15 +163,25 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
       setApi(deepseekApi);
       initializeConversation(deepseekApi);
     }
-  }, [apiKey]);
+  }, [apiKey, initializeConversation]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Quick-select suggestions via keyboard 1/2/3
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (isLoading || isStreaming || conversationEnded) return;
+      if (['1','2','3'].includes(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        const text = suggestions[idx];
+        if (text) setUserInput(text);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isLoading, isStreaming, conversationEnded, suggestions]);
 
   // Use API key from environment variables
   useEffect(() => {
@@ -77,41 +197,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
         variant: "destructive"
       });
     }
-  }, []);
-
-  const initializeConversation = async (deepseekApi: DeepseekApi) => {
-    setIsLoading(true);
-    try {
-      const systemPrompt = deepseekApi.getScenarioSystemPrompt(conversationData.scenarioId, conversationData.npcName);
-      const introMessage = await deepseekApi.chat([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Start the conversation naturally based on the scenario.' }
-      ]);
-
-      setMessages([
-        {
-          id: 'intro',
-          role: 'system',
-          content: `Scenario: ${scenarioGoals[conversationData.scenarioId as keyof typeof scenarioGoals]}`,
-          timestamp: new Date()
-        },
-        {
-          id: 'ai-intro',
-          role: 'assistant',
-          content: introMessage,
-          timestamp: new Date()
-        }
-      ]);
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: "Failed to start conversation. Please check your API key.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [toast]);
 
   const handleSendMessage = async () => {
     if (!userInput.trim() || !api || isLoading || conversationEnded) return;
@@ -126,6 +212,8 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     setMessages(prev => [...prev, newUserMessage]);
     setUserInput('');
     setIsLoading(true);
+    setIsStreaming(true);
+    playSfx('send');
 
     try {
       const conversationHistory = [...messages, newUserMessage];
@@ -141,32 +229,37 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
           }))
       ];
 
-      const aiResponse = await api.chat(chatMessages);
-
-      const newAiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: aiResponse,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, newAiMessage]);
+      const aiId = (Date.now() + 1).toString();
+      setMessages(prev => [...prev, { id: aiId, role: 'assistant', content: '', timestamp: new Date() }]);
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let first = true;
+      await api.chatStream(chatMessages, (token) => {
+        if (first) { playSfx('tokenStart'); first = false; }
+        setMessages(prev => prev.map(m => m.id === aiId ? { ...m, content: m.content + token } : m));
+      }, controller.signal);
+      playSfx('tokenEnd');
 
       // Check if conversation should end (after 4+ exchanges)
       if (conversationHistory.filter(msg => msg.role === 'user').length >= 4) {
         setTimeout(() => {
-          handleEndConversation([...conversationHistory, newAiMessage]);
+          handleEndConversation();
         }, 2000);
       }
 
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to get AI response. Please try again.",
-        variant: "destructive"
-      });
+    } catch (error: unknown) {
+      if ((error as Error)?.name !== 'AbortError') {
+        toast({
+          title: "Error",
+          description: "Failed to get AI response. Please try again.",
+          variant: "destructive"
+        });
+        playSfx('error');
+      }
     } finally {
+      setIsStreaming(false);
       setIsLoading(false);
+      abortRef.current = null;
     }
   };
 
@@ -185,6 +278,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
       );
 
       setEvaluation(evaluation);
+      if (evaluation?.success) playSfx('success'); else playSfx('error');
     } catch (error) {
       console.error('Evaluation failed:', error);
       setEvaluation({
@@ -238,16 +332,18 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <Button 
             variant="outline" 
             onClick={onBack}
+            className="shrink-0"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Game
+            <span className="hidden sm:inline">Back to Game</span>
+            <span className="sm:hidden">Back</span>
           </Button>
           
-          <Badge variant="secondary" className="text-lg px-4 py-2">
+          <Badge variant="secondary" className="text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 mx-auto sm:mx-0">
             {conversationData.setting}
           </Badge>
           
@@ -255,27 +351,34 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
             <Button 
               onClick={() => handleEndConversation()}
               disabled={isLoading}
-              className="ml-4"
+              className="shrink-0 w-full sm:w-auto"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Evaluate Again
+              <span className="hidden sm:inline">Evaluate Again</span>
+              <span className="sm:hidden">Re-evaluate</span>
             </Button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Chat Area */}
-          <div className="lg:col-span-2">
-            <Card className="h-[600px] flex flex-col">
+          <div className="xl:col-span-2">
+            <Card className="h-[500px] sm:h-[600px] flex flex-col">
               <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-semibold">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-semibold float-y shadow-md">
                     {conversationData.npcName[0]}
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{conversationData.npcName}</h3>
-                    <p className="text-sm text-gray-600">AI-powered conversation</p>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold truncate">{conversationData.npcName}</h3>
+                    <p className="text-sm text-gray-600 truncate">AI-powered conversation</p>
                   </div>
+                </div>
+                {/* Move HUD bars to a separate row for better responsiveness */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <HudBar label="Trust" value={trustScore} icon={<Shield className="h-3 w-3" />} gradient="linear-gradient(90deg,#22c55e,#3b82f6)" />
+                  <HudBar label="Rapport" value={rapportScore} icon={<Heart className="h-3 w-3" />} gradient="linear-gradient(90deg,#f472b6,#a78bfa)" />
+                  <HudBar label="Risk" value={riskScore} icon={<AlertTriangle className="h-3 w-3" />} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" />
                 </div>
               </div>
               
@@ -283,7 +386,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} fade-in-up`}
                   >
                     <div
                       className={`max-w-[80%] p-3 rounded-lg ${
@@ -294,7 +397,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      <p className="whitespace-pre-wrap">{message.content}{message.role === 'assistant' && isStreaming && message.id === messages[messages.length - 1]?.id ? <span className="blinking-cursor">▍</span> : null}</p>
                       <p className="text-xs mt-1 opacity-70">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
@@ -302,7 +405,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                   </div>
                 ))}
                 
-                {isLoading && (
+                {isLoading && !isStreaming && (
                   <div className="flex justify-start">
                     <div className="bg-gray-100 p-3 rounded-lg">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -315,57 +418,62 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
               {!conversationEnded && (
                 <div className="p-4 border-t space-y-3">
                   {/* Quick suggestions to guide healthy communication */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUserInput("I want to make sure we're both safe and comfortable.")}
-                      className="text-xs text-left justify-start h-auto py-2"
-                      disabled={isLoading}
-                    >
-                      💡 "I want to make sure we're both safe and comfortable."
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUserInput("Let's discuss protection and what we're both comfortable with.")}
-                      className="text-xs text-left justify-start h-auto py-2"
-                      disabled={isLoading}
-                    >
-                      🛡️ "Let's discuss protection and boundaries."
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUserInput("Maybe we should slow down and get to know each other better first.")}
-                      className="text-xs text-left justify-start h-auto py-2"
-                      disabled={isLoading}
-                    >
-                      ⏸️ "Maybe we should take things slower."
-                    </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((s, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserInput(s)}
+                        className="text-xs text-left justify-start h-auto py-2 flex-1 min-w-0 sm:flex-none sm:min-w-[200px]"
+                        disabled={isLoading || isStreaming}
+                        title={`Shortcut: ${i + 1}`}
+                      >
+                        <span className="mr-1">{i === 0 ? '💡' : i === 1 ? '🛡️' : '⏸️'}</span>
+                        <span className="truncate">"{s}"</span>
+                      </Button>
+                    ))}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Input
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type your message or choose a suggestion..."
-                      disabled={isLoading}
+                      disabled={isLoading || isStreaming}
                       className="flex-1"
                     />
-                    <Button 
-                      onClick={handleSendMessage}
-                      disabled={!userInput.trim() || isLoading}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleEndConversation()}
-                      disabled={isLoading}
-                    >
-                      End & Evaluate
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={handleSendMessage}
+                        disabled={!userInput.trim() || isLoading || isStreaming}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <Send className="h-4 w-4 sm:mr-0" />
+                        <span className="ml-2 sm:hidden">Send</span>
+                      </Button>
+                      {isStreaming ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => { abortRef.current?.abort(); }}
+                          disabled={!isStreaming}
+                          title="Stop generation"
+                          className="flex-1 sm:flex-none"
+                        >
+                          <Square className="h-4 w-4 mr-1" /> 
+                          <span className="hidden sm:inline">Stop</span>
+                        </Button>
+                      ) : null}
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleEndConversation()}
+                        disabled={isLoading || isStreaming}
+                        className="flex-1 sm:flex-none text-xs sm:text-sm"
+                      >
+                        <span className="hidden sm:inline">End & Evaluate</span>
+                        <span className="sm:hidden">Evaluate</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -432,3 +540,16 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     </div>
   );
 };
+
+// Lightweight HUD bar component
+const HudBar: React.FC<{ label: string; value: number; icon?: React.ReactNode; gradient: string }> = ({ label, value, icon, gradient }) => (
+  <div>
+    <div className="flex items-center justify-between text-[10px] text-gray-600 mb-1">
+      <span className="flex items-center gap-1">{icon}{label}</span>
+      <span>{Math.max(0, Math.min(100, Math.round(value)))}%</span>
+    </div>
+    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+      <div className="h-2 rounded-full transition-all" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: gradient }} />
+    </div>
+  </div>
+);

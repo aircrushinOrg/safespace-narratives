@@ -139,4 +139,36 @@ All colors MUST be HSL.
   .animate-walk {
     animation: walk 0.6s ease-in-out infinite;
   }
+
+  /* Smooth fade-in-up for chat bubbles */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in-up {
+    animation: fadeInUp 220ms ease-out both;
+  }
+
+  /* Blinking cursor for streaming */
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  .blinking-cursor {
+    display: inline-block;
+    width: 0.6ch;
+    margin-left: 2px;
+    color: hsl(var(--foreground));
+    animation: blink 1s steps(1, end) infinite;
+  }
+
+  /* Gentle floating avatar */
+  @keyframes floatY {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+  }
+  .float-y {
+    animation: floatY 3s ease-in-out infinite;
+  }
 }

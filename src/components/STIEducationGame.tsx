@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GameScenario, scenarios } from './GameScenario';
 import { Game2D } from './Game2D';
 import { ChatInterface } from './ChatInterface';
-import { AIConversationScene } from './AIConversationScene';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BookOpen, Shield, Users, Target, Gamepad2 } from 'lucide-react';
 
-type GameState = 'menu' | 'game2d' | 'scenario' | 'ai-conversation';
+type GameState = 'menu' | 'game2d' | 'scenario';
 
 interface ConversationData {
   scenarioId: string;
@@ -17,9 +17,9 @@ interface ConversationData {
 }
 
 export const STIEducationGame: React.FC = () => {
+  const navigate = useNavigate();
   const [gameState, setGameState] = useState<GameState>('game2d');
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
-  const [conversationData, setConversationData] = useState<ConversationData | null>(null);
 
   const handleStart2DGame = () => {
     setGameState('game2d');
@@ -56,32 +56,21 @@ export const STIEducationGame: React.FC = () => {
 
     const data = scenarioMap[scenarioId];
     if (data) {
-      setConversationData(data);
-      setGameState('ai-conversation');
+      // Navigate to conversation page with scenario data as URL parameters
+      const params = new URLSearchParams({
+        scenarioId: data.scenarioId,
+        npcName: data.npcName,
+        npcSprite: data.npcSprite,
+        setting: data.setting
+      });
+      navigate(`/conversation?${params.toString()}`);
     }
   };
 
   const handleBackToMenu = () => {
     setGameState('game2d');
     setSelectedScenario(null);
-    setConversationData(null);
   };
-
-  const handleBackToGame = () => {
-    setGameState('game2d');
-    setSelectedScenario(null);
-    setConversationData(null);
-  };
-
-  // Render AI conversation scene
-  if (gameState === 'ai-conversation' && conversationData) {
-    return (
-      <AIConversationScene 
-        conversationData={conversationData}
-        onBack={handleBackToGame}
-      />
-    );
-  }
 
   // Always show the Phaser game by default
   return <Game2D onBack={handleBackToMenu} onScenarioSelect={handleScenarioSelect} />;
