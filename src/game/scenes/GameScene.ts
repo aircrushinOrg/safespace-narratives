@@ -40,41 +40,6 @@ export class GameScene extends Phaser.Scene {
     bg.fillGradientStyle(0x87CEEB, 0x87CEEB, 0x98FB98, 0x98FB98);
     bg.fillRect(0, 0, width, height);
 
-    // Main campus building (stylized)
-    const building = this.add.graphics();
-    building.fillStyle(0x8B4513);
-    building.fillRect(width * 0.2, height * 0.25, width * 0.6, height * 0.4);
-    
-    // Building details
-    building.fillStyle(0xA0522D);
-    building.fillRect(width * 0.22, height * 0.27, width * 0.56, height * 0.36);
-    
-    // Windows
-    building.fillStyle(0x4682B4);
-    for (let i = 0; i < 8; i++) {
-      for (let j = 0; j < 3; j++) {
-        building.fillRect(
-          width * 0.24 + i * (width * 0.52 / 8), 
-          height * 0.3 + j * (height * 0.1),
-          width * 0.04,
-          height * 0.06
-        );
-      }
-    }
-    
-    // Central tower/spire
-    building.fillStyle(0x8B4513);
-    building.fillRect(width * 0.47, height * 0.1, width * 0.06, height * 0.2);
-    
-    // Tower roof
-    building.fillStyle(0xB22222);
-    const tower = new Phaser.Geom.Triangle(
-      width * 0.44, height * 0.1,
-      width * 0.5, height * 0.05,
-      width * 0.56, height * 0.1
-    );
-    building.fillTriangleShape(tower);
-
     // Campus lawn (large green area)
     const lawn = this.add.graphics();
     lawn.fillStyle(0x228B22);
@@ -90,25 +55,63 @@ export class GameScene extends Phaser.Scene {
       );
     }
 
-    // Campus pathways
+    // Main campus pathway system
     const paths = this.add.graphics();
     paths.fillStyle(0xDEB887);
-    paths.fillRect(width * 0.45, height * 0.65, width * 0.1, height * 0.35);
-    paths.fillRect(0, height * 0.78, width, height * 0.05);
+    
+    // Central main path (horizontal)
+    paths.fillRect(0, height * 0.45, width, height * 0.1);
+    
+    // Vertical connecting paths
+    paths.fillRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6);
+    paths.fillRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5);
+    paths.fillRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55);
+    
+    // Add path borders
+    paths.lineStyle(2, 0xCD853F);
+    paths.strokeRect(0, height * 0.45, width, height * 0.1);
+    paths.strokeRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6);
+    paths.strokeRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5);
+    paths.strokeRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55);
 
-    // Decorative campus trees
-    for (let i = 0; i < 6; i++) {
-      const treeX = (i / 5) * width * 0.8 + width * 0.1;
+    // Path intersections (decorative circles)
+    paths.fillStyle(0xF4A460);
+    paths.fillCircle(width * 0.25, height * 0.5, 15);
+    paths.fillCircle(width * 0.5, height * 0.5, 15);
+    paths.fillCircle(width * 0.75, height * 0.5, 15);
+
+    // Decorative campus trees along paths
+    for (let i = 0; i < 8; i++) {
+      const treeX = width * 0.1 + (i / 7) * width * 0.8;
       const treeY = height * 0.7 + Math.random() * height * 0.1;
       this.createCampusTree(treeX, treeY);
     }
 
-    // Campus benches
-    for (let i = 0; i < 3; i++) {
-      const benchX = width * 0.2 + i * width * 0.3;
-      const benchY = height * 0.75;
-      this.createBench(benchX, benchY);
+    // Campus benches along pathways
+    this.createBench(width * 0.15, height * 0.5);
+    this.createBench(width * 0.35, height * 0.5);
+    this.createBench(width * 0.65, height * 0.5);
+    this.createBench(width * 0.85, height * 0.5);
+
+    // Add pathway lamp posts
+    for (let i = 0; i < 4; i++) {
+      const lampX = width * 0.15 + i * width * 0.25;
+      const lampY = height * 0.4;
+      this.createLampPost(lampX, lampY);
     }
+  }
+
+  private createLampPost(x: number, y: number): void {
+    const lamp = this.add.graphics();
+    lamp.fillStyle(0x696969);
+    // Lamp post
+    lamp.fillRect(x - 2, y, 4, 20);
+    // Lamp top
+    lamp.fillStyle(0xFFD700, 0.6);
+    lamp.fillCircle(x, y - 5, 8);
+    // Lamp glow effect
+    lamp.fillStyle(0xFFFFE0, 0.2);
+    lamp.fillCircle(x, y - 5, 15);
   }
 
   private createCampusTree(x: number, y: number): void {
