@@ -35,70 +35,197 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createStyledCampusBackground(width: number, height: number): void {
-    // Sky gradient background
+    // Enhanced magical sky gradient
     const bg = this.add.graphics();
-    bg.fillGradientStyle(0x87CEEB, 0x87CEEB, 0x98FB98, 0x98FB98);
+    bg.fillGradientStyle(0xFF6B9D, 0xFF6B9D, 0x4ECDC4, 0x45B7D1);
     bg.fillRect(0, 0, width, height);
 
-    // Campus lawn (large green area)
+    // Add subtle animated rays of light
+    for (let i = 0; i < 6; i++) {
+      const ray = this.add.graphics();
+      ray.fillStyle(0xFFFFFF, 0.1);
+      ray.fillRect(-5, 0, 10, height);
+      ray.setPosition(width * (i / 5), 0);
+      ray.setRotation(Math.PI / 12);
+      
+      this.tweens.add({
+        targets: ray,
+        alpha: { from: 0.1, to: 0.3 },
+        duration: 3000 + i * 500,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+
+    // Campus lawn with enhanced colors and texture
     const lawn = this.add.graphics();
-    lawn.fillStyle(0x228B22);
+    lawn.fillGradientStyle(0x32CD32, 0x32CD32, 0x228B22, 0x006400);
     lawn.fillRect(0, height * 0.65, width, height * 0.35);
     
-    // Add some texture to the lawn
-    lawn.fillStyle(0x32CD32, 0.3);
-    for (let i = 0; i < 20; i++) {
+    // Add magical grass texture with sparkles
+    lawn.fillStyle(0x90EE90, 0.4);
+    for (let i = 0; i < 30; i++) {
       lawn.fillCircle(
         Math.random() * width,
         height * 0.7 + Math.random() * height * 0.25,
-        5 + Math.random() * 10
+        3 + Math.random() * 8
       );
     }
 
-    // Main campus pathway system
+    // Enhanced pathway system with glowing edges
     const paths = this.add.graphics();
-    paths.fillStyle(0xDEB887);
+    paths.fillGradientStyle(0xF4A460, 0xF4A460, 0xDEB887, 0xD2B48C);
     
-    // Central main path (horizontal)
-    paths.fillRect(0, height * 0.45, width, height * 0.1);
+    // Central main path (horizontal) with curves
+    paths.fillRoundedRect(0, height * 0.45, width, height * 0.1, 5);
     
-    // Vertical connecting paths
-    paths.fillRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6);
-    paths.fillRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5);
-    paths.fillRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55);
+    // Vertical connecting paths with rounded edges
+    paths.fillRoundedRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6, 5);
+    paths.fillRoundedRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5, 5);
+    paths.fillRoundedRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55, 5);
     
-    // Add path borders
-    paths.lineStyle(2, 0xCD853F);
-    paths.strokeRect(0, height * 0.45, width, height * 0.1);
-    paths.strokeRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6);
-    paths.strokeRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5);
-    paths.strokeRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55);
+    // Add glowing path borders
+    paths.lineStyle(3, 0xFFE4B5, 0.8);
+    paths.strokeRoundedRect(0, height * 0.45, width, height * 0.1, 5);
+    paths.strokeRoundedRect(width * 0.2, height * 0.2, width * 0.1, height * 0.6, 5);
+    paths.strokeRoundedRect(width * 0.45, height * 0.3, width * 0.1, height * 0.5, 5);
+    paths.strokeRoundedRect(width * 0.7, height * 0.25, width * 0.1, height * 0.55, 5);
 
-    // Path intersections (decorative circles)
-    paths.fillStyle(0xF4A460);
-    paths.fillCircle(width * 0.25, height * 0.5, 15);
-    paths.fillCircle(width * 0.5, height * 0.5, 15);
-    paths.fillCircle(width * 0.75, height * 0.5, 15);
+    // Enhanced path intersections with magical glow
+    paths.fillGradientStyle(0xFFD700, 0xFFD700, 0xF4A460, 0xF4A460);
+    paths.fillCircle(width * 0.25, height * 0.5, 18);
+    paths.fillCircle(width * 0.5, height * 0.5, 18);
+    paths.fillCircle(width * 0.75, height * 0.5, 18);
 
-    // Decorative campus trees along paths
-    for (let i = 0; i < 8; i++) {
-      const treeX = width * 0.1 + (i / 7) * width * 0.8;
-      const treeY = height * 0.7 + Math.random() * height * 0.1;
-      this.createCampusTree(treeX, treeY);
+    // Add intersection sparkle effects
+    for (let i = 0; i < 3; i++) {
+      const intersectionX = width * (0.25 + i * 0.25);
+      const sparkle = this.add.graphics();
+      sparkle.fillStyle(0xFFFFFF, 0.8);
+      sparkle.fillCircle(0, 0, 2);
+      sparkle.setPosition(intersectionX, height * 0.5);
+      
+      this.tweens.add({
+        targets: sparkle,
+        scale: { from: 1, to: 2 },
+        alpha: { from: 0.8, to: 0 },
+        duration: 1500,
+        repeat: -1,
+        delay: i * 500
+      });
     }
 
-    // Campus benches along pathways
-    this.createBench(width * 0.15, height * 0.5);
-    this.createBench(width * 0.35, height * 0.5);
-    this.createBench(width * 0.65, height * 0.5);
-    this.createBench(width * 0.85, height * 0.5);
+    // Enhanced decorative campus trees
+    for (let i = 0; i < 10; i++) {
+      const treeX = width * 0.1 + (i / 9) * width * 0.8;
+      const treeY = height * 0.7 + Math.random() * height * 0.1;
+      this.createMagicalCampusTree(treeX, treeY, i);
+    }
 
-    // Add pathway lamp posts
+    // Enhanced benches with magical glow
+    this.createEnhancedBench(width * 0.15, height * 0.5);
+    this.createEnhancedBench(width * 0.35, height * 0.5);
+    this.createEnhancedBench(width * 0.65, height * 0.5);
+    this.createEnhancedBench(width * 0.85, height * 0.5);
+
+    // Enhanced lamp posts with magical lighting
     for (let i = 0; i < 4; i++) {
       const lampX = width * 0.15 + i * width * 0.25;
       const lampY = height * 0.4;
-      this.createLampPost(lampX, lampY);
+      this.createMagicalLampPost(lampX, lampY, i);
     }
+  }
+
+  private createMagicalCampusTree(x: number, y: number, index: number): void {
+    const treeContainer = this.add.container(x, y);
+    
+    // Enhanced trunk with bark texture
+    const trunk = this.add.graphics();
+    trunk.fillGradientStyle(0x8B4513, 0x8B4513, 0x654321, 0x654321);
+    trunk.fillRoundedRect(-5, 0, 10, 28, 2);
+    treeContainer.add(trunk);
+    
+    // Multi-layered magical foliage
+    const foliage1 = this.add.graphics();
+    foliage1.fillGradientStyle(0x228B22, 0x228B22, 0x32CD32, 0x32CD32);
+    foliage1.fillCircle(0, -8, 22);
+    treeContainer.add(foliage1);
+    
+    const foliage2 = this.add.graphics();
+    foliage2.fillStyle(0x90EE90, 0.7);
+    foliage2.fillCircle(-12, -3, 15);
+    foliage2.fillCircle(12, -3, 15);
+    foliage2.fillCircle(0, -20, 13);
+    treeContainer.add(foliage2);
+    
+    // Add magical sparkles to trees
+    const sparkle = this.add.graphics();
+    sparkle.fillStyle(0xFFD700, 0.8);
+    sparkle.fillCircle(0, -15, 2);
+    treeContainer.add(sparkle);
+    
+    this.tweens.add({
+      targets: sparkle,
+      alpha: { from: 0.8, to: 0.2 },
+      scale: { from: 1, to: 0.5 },
+      duration: 2000 + index * 300,
+      yoyo: true,
+      repeat: -1
+    });
+    
+    // Enhanced sway animation
+    this.tweens.add({
+      targets: treeContainer,
+      rotation: 0.04 + Math.random() * 0.02,
+      duration: 3000 + Math.random() * 2000 + index * 200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private createEnhancedBench(x: number, y: number): void {
+    const bench = this.add.graphics();
+    bench.fillGradientStyle(0x8B4513, 0x8B4513, 0x654321, 0x654321);
+    // Enhanced bench seat with curves
+    bench.fillRoundedRect(x - 18, y, 36, 5, 2);
+    // Enhanced bench back
+    bench.fillRoundedRect(x - 18, y - 10, 36, 3, 1);
+    // Enhanced bench legs
+    bench.fillRoundedRect(x - 15, y, 3, 8, 1);
+    bench.fillRoundedRect(x + 12, y, 3, 8, 1);
+    
+    // Add magical glow to bench
+    bench.lineStyle(2, 0xFFE4B5, 0.3);
+    bench.strokeRoundedRect(x - 18, y, 36, 5, 2);
+  }
+
+  private createMagicalLampPost(x: number, y: number, index: number): void {
+    const lamp = this.add.graphics();
+    
+    // Enhanced lamp post with texture
+    lamp.fillGradientStyle(0x696969, 0x696969, 0x2F4F4F, 0x2F4F4F);
+    lamp.fillRoundedRect(x - 3, y, 6, 25, 1);
+    
+    // Enhanced lamp top with magical glow
+    lamp.fillGradientStyle(0xFFD700, 0xFFD700, 0xFFA500, 0xFFA500);
+    lamp.fillCircle(x, y - 8, 10);
+    
+    // Enhanced lamp glow effect with pulsing animation
+    const glow = this.add.graphics();
+    glow.fillStyle(0xFFFFE0, 0.3);
+    glow.fillCircle(x, y - 8, 20);
+    
+    this.tweens.add({
+      targets: glow,
+      scale: { from: 1, to: 1.3 },
+      alpha: { from: 0.3, to: 0.1 },
+      duration: 2500 + index * 400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
   }
 
   private createLampPost(x: number, y: number): void {
@@ -299,31 +426,61 @@ export class GameScene extends Phaser.Scene {
   private createUI(): void {
     const { width, height } = this.sys.game.canvas;
     
-    // Mini-map (positioned relative to screen)
+    // Enhanced mini-map with magical border
     const miniMap = this.add.graphics();
-    miniMap.fillStyle(0x000000, 0.5);
-    miniMap.fillRect(20, 20, 150, 100);
-    miniMap.lineStyle(2, 0xffffff, 1);
-    miniMap.strokeRect(20, 20, 150, 100);
+    miniMap.fillGradientStyle(0x000022, 0x000022, 0x001133, 0x001133);
+    miniMap.fillRoundedRect(20, 20, 160, 110, 8);
+    miniMap.lineStyle(3, 0xFF6B9D, 1);
+    miniMap.strokeRoundedRect(20, 20, 160, 110, 8);
     
-    // Add player dot on minimap
-    const playerDot = this.add.circle(0, 0, 3, 0x00ff00);
+    // Add minimap glow
+    miniMap.lineStyle(1, 0xFFFFFF, 0.5);
+    miniMap.strokeRoundedRect(18, 18, 164, 114, 10);
+    
+    // Enhanced player dot with glow effect
+    const playerDot = this.add.graphics();
+    playerDot.fillStyle(0x00FF00);
+    playerDot.fillCircle(0, 0, 4);
+    playerDot.lineStyle(2, 0xFFFFFF, 0.8);
+    playerDot.strokeCircle(0, 0, 6);
     playerDot.setDepth(100);
+
+    // Add pulsing animation to player dot
+    this.tweens.add({
+      targets: playerDot,
+      scale: { from: 1, to: 1.3 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
 
     // Update minimap
     this.events.on('postupdate', () => {
-      const mapX = 20 + (this.player.x / width) * 150;
-      const mapY = 20 + (this.player.y / height) * 100;
+      const mapX = 30 + (this.player.x / width) * 140;
+      const mapY = 30 + (this.player.y / height) * 90;
       playerDot.setPosition(mapX, mapY);
     });
     
-    // Add fullscreen instructions
-    const instructions = this.add.text(width / 2, height - 30, 'Use WASD or Arrow Keys to move • Press SPACE/ENTER to interact with NPCs', {
-      fontSize: '16px',
-      color: '#ffffff',
-      backgroundColor: '#000000aa',
-      padding: { x: 10, y: 5 }
+    // Enhanced instructions with beautiful styling
+    const instructions = this.add.text(width / 2, height - 35, '✨ Use WASD or Arrow Keys to move • Press SPACE/ENTER to interact with NPCs ✨', {
+      fontSize: '18px',
+      color: '#FFE4B5',
+      backgroundColor: '#FF6B9D99',
+      padding: { x: 15, y: 8 },
+      stroke: '#FFFFFF',
+      strokeThickness: 1
     }).setOrigin(0.5).setDepth(100);
+
+    // Add floating animation to instructions
+    this.tweens.add({
+      targets: instructions,
+      y: instructions.y - 3,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
   }
 
   private getNearbyNPC(): NPC | null {
