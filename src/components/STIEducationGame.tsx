@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { GameScenario, scenarios } from './GameScenario';
-import { ChatInterface } from './ChatInterface';
+import { Game2D } from './Game2D';
+import { ScenarioGame } from './ScenarioGame';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { BookOpen, Shield, Users, Target } from 'lucide-react';
+import { BookOpen, Shield, Users, Target, Gamepad2 } from 'lucide-react';
 
-type GameState = 'menu' | 'playing';
+type GameState = 'menu' | 'game2d' | 'scenario';
 
 export const STIEducationGame: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>('menu');
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
 
+  const handleStart2DGame = () => {
+    setGameState('game2d');
+  };
+
   const handleScenarioSelect = (scenarioId: string) => {
     setSelectedScenario(scenarioId);
-    setGameState('playing');
+    setGameState('scenario');
   };
 
   const handleBackToMenu = () => {
@@ -21,11 +26,20 @@ export const STIEducationGame: React.FC = () => {
     setSelectedScenario(null);
   };
 
-  if (gameState === 'playing' && selectedScenario) {
+  const handleBackToGame = () => {
+    setGameState('game2d');
+    setSelectedScenario(null);
+  };
+
+  if (gameState === 'game2d') {
+    return <Game2D onBack={handleBackToMenu} onScenarioSelect={handleScenarioSelect} />;
+  }
+
+  if (gameState === 'scenario' && selectedScenario) {
     return (
-      <ChatInterface 
+      <ScenarioGame 
         scenarioId={selectedScenario} 
-        onBack={handleBackToMenu}
+        onBack={handleBackToGame}
       />
     );
   }
@@ -96,24 +110,56 @@ export const STIEducationGame: React.FC = () => {
           </Card>
         </div>
 
-        {/* Scenarios Section */}
+        {/* Game Mode Selection */}
         <div className="space-y-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4">Choose Your Scenario</h2>
+            <h2 className="text-3xl font-bold mb-4">Start Your Learning Journey</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Each scenario presents unique challenges and learning opportunities. 
-              Practice making informed decisions in realistic social situations.
+              Choose how you want to learn about sexual health and safety through interactive experiences.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
-            {scenarios.map((scenario) => (
-              <GameScenario
-                key={scenario.id}
-                scenario={scenario}
-                onSelect={handleScenarioSelect}
-              />
-            ))}
+          {/* Main Game Button */}
+          <div className="text-center">
+            <Card className="p-8 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20 hover:shadow-[var(--shadow-glow)] transition-all duration-300">
+              <div className="space-y-4">
+                <div className="w-16 h-16 bg-primary/20 text-primary rounded-lg flex items-center justify-center mx-auto">
+                  <Gamepad2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-bold">Enter the Campus</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Walk around the virtual campus, meet different characters, and choose which scenarios to explore.
+                </p>
+                <Button 
+                  variant="hero" 
+                  size="lg"
+                  onClick={handleStart2DGame}
+                  className="px-8 py-3 text-lg"
+                >
+                  Start 2D Game
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          {/* Individual Scenarios */}
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-2">Or Choose a Specific Scenario</h3>
+              <p className="text-sm text-muted-foreground">
+                Jump directly into a particular learning experience
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              {scenarios.map((scenario) => (
+                <GameScenario
+                  key={scenario.id}
+                  scenario={scenario}
+                  onSelect={handleScenarioSelect}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
