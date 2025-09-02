@@ -37,7 +37,7 @@ export class DialogManager {
     bg.setScale(2, 1);
 
     // NPC portrait
-    const portrait = this.scene.add.image(-350, -20, `npc-${this.currentNPC.scenarioId.split('-')[0]}`);
+    const portrait = this.scene.add.image(-350, -20, `npc-${this.currentNPC.spriteKey}`);
     portrait.setScale(2);
 
     // Name text

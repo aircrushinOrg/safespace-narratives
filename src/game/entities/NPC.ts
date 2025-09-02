@@ -9,6 +9,7 @@ export class NPC extends Phaser.GameObjects.Sprite {
   public dialogue: string[];
   public scenarioId: string;
   public npcName: string;
+  public spriteKey: string;
 
   constructor(
     scene: Phaser.Scene,
@@ -22,6 +23,7 @@ export class NPC extends Phaser.GameObjects.Sprite {
     super(scene, x, y, `npc-${spriteKey}`);
     
     this.npcName = name;
+    this.spriteKey = spriteKey;
     this.dialogue = dialogue;
     this.scenarioId = scenarioId;
     
