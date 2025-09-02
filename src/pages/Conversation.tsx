@@ -59,10 +59,10 @@ const Conversation: React.FC = () => {
 
   const scenarioDescription = useMemo(() => {
     const goals: Record<string, string> = {
-      'college-party': 'Practice discussing safety, consent, and responsible decision-making at parties',
-      'travel-romance': 'Navigate health considerations and safety while traveling internationally',
-      'relationship-milestone': 'Communicate about STI testing, protection, and comfort levels in relationships',
-      'dating-app': 'Discuss safety and getting to know someone from online dating'
+      'college-party': 'Practice boundary-setting and consent under social pressure at parties',
+      'travel-romance': 'Handle safety and health talks abroad amid impulsive suggestions',
+      'relationship-milestone': 'Discuss testing, protection, and boundaries when a partner pushes to move faster',
+      'dating-app': 'Navigate consent and protection when a confident match pushes to escalate quickly'
     };
     return goals[scenarioId] ?? setting;
   }, [scenarioId, setting]);
@@ -97,7 +97,6 @@ const Conversation: React.FC = () => {
               </Button>
             </div>
 
-            {/* Center: Scenario + NPC */}
             <div className="flex min-w-0 items-center gap-2 text-slate-100">
               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-fuchsia-500 to-pink-500 text-xs font-bold shadow">
                 {conversationData.npcName[0]}
@@ -105,15 +104,6 @@ const Conversation: React.FC = () => {
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{conversationData.npcName}</div>
                 <div className="truncate text-[11px] text-slate-300">{conversationData.setting}</div>
-              </div>
-            </div>
-
-            {/* Right: Hearts */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-rose-400">
-                <Heart className="h-4 w-4 fill-current" />
-                <Heart className="h-4 w-4 fill-current" />
-                <Heart className="h-4 w-4 fill-current" />
               </div>
             </div>
           </div>

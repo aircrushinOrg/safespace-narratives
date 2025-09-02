@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Send, ArrowLeft, CheckCircle, XCircle, Square, Shield, Heart, AlertTriangle, Sparkles, Flame, Dice6, Check } from 'lucide-react';
+import { Loader2, Send, ArrowLeft, CheckCircle, XCircle, Square, Shield, Heart, AlertTriangle, Sparkles, Flame, Dice6 } from 'lucide-react';
 import { DeepseekApi } from '@/services/deepseekApi';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,7 +22,7 @@ interface ConversationData {
 
 interface Evaluation {
   success: boolean;
-  score: number;
+  score: number | null;
   feedback: string;
   summary: string;
 }
@@ -53,6 +53,10 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
   const [gains, setGains] = useState<Array<{ id: string; label: string; delta: number }>>([]);
   const [combo, setCombo] = useState(0);
   const lastComboAtRef = useRef<number>(0);
+  const [currentScores, setCurrentScores] = useState<{ trust: number; rapport: number; risk: number }>({ trust: 0, rapport: 0, risk: 0 });
+  const [isAnalyzingScores, setIsAnalyzingScores] = useState(false);
+  const lastAnalyzedUserMessageIdRef = useRef<string | null>(null);
+  const analysisTimeoutRef = useRef<number | null>(null);
 
   // Lightweight WebAudio synth for SFX
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -83,27 +87,99 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     }
   };
 
-  const trustScore = (() => {
-    const keywords = ['consent', 'boundary', 'boundaries', 'protection', 'condom', 'sti', 'testing', 'safe', 'comfort', 'birth control'];
+  // Fallback keyword-based scoring (same as before)
+  const calculateFallbackScores = useCallback(() => {
+    const trustKeywords = ['consent', 'boundary', 'boundaries', 'protection', 'condom', 'sti', 'testing', 'safe', 'comfort', 'birth control'];
     const userTexts = messages.filter(m => m.role === 'user').map(m => m.content.toLowerCase()).join(' ');
-    const hits = keywords.reduce((acc, k) => acc + (userTexts.includes(k) ? 1 : 0), 0);
-    const normalized = Math.min(100, Math.round((hits / Math.max(4, keywords.length)) * 100));
-    return normalized;
-  })();
+    const trustHits = trustKeywords.reduce((acc, k) => acc + (userTexts.includes(k) ? 1 : 0), 0);
+    const trust = Math.min(100, Math.round((trustHits / Math.max(4, trustKeywords.length)) * 100));
 
-  const rapportScore = (() => {
-    const pos = ['thank', 'appreciate', 'understand', 'comfortable', 'respect', 'listen', 'care', 'feel', 'glad'];
-    const text = messages.map(m => m.content.toLowerCase()).join(' ');
-    const hits = pos.reduce((acc, k) => acc + (text.includes(k) ? 1 : 0), 0);
-    return Math.min(100, Math.round((hits / 6) * 100));
-  })();
+    const rapportKeywords = ['thank', 'appreciate', 'understand', 'comfortable', 'respect', 'listen', 'care', 'feel', 'glad'];
+    const allTexts = messages.map(m => m.content.toLowerCase()).join(' ');
+    const rapportHits = rapportKeywords.reduce((acc, k) => acc + (allTexts.includes(k) ? 1 : 0), 0);
+    const rapport = Math.min(100, Math.round((rapportHits / 6) * 100));
 
-  const riskScore = (() => {
-    const risk = ['drunk', 'alcohol', 'drink', 'party', 'unprotected', 'no condom', 'unsafe', 'random', 'tonight'];
-    const text = messages.map(m => m.content.toLowerCase()).join(' ');
-    const hits = risk.reduce((acc, k) => acc + (text.includes(k) ? 1 : 0), 0);
-    return Math.min(100, Math.round((hits / 6) * 100));
-  })();
+    const riskKeywords = ['drunk', 'alcohol', 'drink', 'party', 'unprotected', 'no condom', 'unsafe', 'random', 'tonight'];
+    const riskHits = riskKeywords.reduce((acc, k) => acc + (allTexts.includes(k) ? 1 : 0), 0);
+    const risk = Math.min(100, Math.round((riskHits / 6) * 100));
+
+    return { trust, rapport, risk };
+  }, [messages]);
+
+  // LLM-based score analysis function
+  const analyzeScoresWithLLM = useCallback(async () => {
+    if (!api || messages.length === 0 || isAnalyzingScores) {
+      console.log('[ScoreAnalysis] analyzeScoresWithLLM skipped: api?', !!api, 'messagesLen', messages.length, 'isAnalyzingScores', isAnalyzingScores);
+      return;
+    }
+
+    // Ensure we only analyze once per new user message
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUserMsg) return;
+    console.log('[ScoreAnalysis] analyzeScoresWithLLM lastUserMsg', { id: lastUserMsg.id, contentLen: lastUserMsg.content.length });
+    if (lastAnalyzedUserMessageIdRef.current === lastUserMsg.id) {
+      console.log('[ScoreAnalysis] skipped: already analyzed for userMsgId', lastUserMsg.id);
+      return;
+    }
+    console.log('[ScoreAnalysis] proceeding to analyze userMsgId', lastUserMsg.id);
+    lastAnalyzedUserMessageIdRef.current = lastUserMsg.id;
+
+    setIsAnalyzingScores(true);
+    try {
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const scores = await api.analyzeConversationScores(conversationHistory, conversationData.scenarioId);
+      console.log('[ScoreAnalysis] analysis complete. scores', scores);
+      setCurrentScores(scores);
+    } catch (error) {
+      console.error('[ScoreAnalysis] Failed to analyze scores with LLM:', error);
+      // Fallback to keyword-based analysis
+      const fallbackScores = calculateFallbackScores();
+      console.log('[ScoreAnalysis] fallback scores', fallbackScores);
+      setCurrentScores(fallbackScores);
+    } finally {
+      setIsAnalyzingScores(false);
+      console.log('[ScoreAnalysis] analyzeScoresWithLLM finished. isAnalyzingScores=false');
+    }
+  }, [api, messages, conversationData.scenarioId, isAnalyzingScores, calculateFallbackScores]);
+
+  // Use current scores from state
+  const { trust: trustScore, rapport: rapportScore, risk: riskScore } = currentScores;
+
+  // Function to trigger analysis after user message
+  const triggerScoreAnalysis = useCallback(() => {
+    // Small delay to ensure message is added to state; debounce to avoid duplicates
+    if (analysisTimeoutRef.current) {
+      console.log('[ScoreAnalysis] triggerScoreAnalysis: clearing pending timer');
+      window.clearTimeout(analysisTimeoutRef.current);
+    }
+    console.log('[ScoreAnalysis] triggerScoreAnalysis: scheduling analysis in 120ms');
+    analysisTimeoutRef.current = window.setTimeout(() => {
+      console.log('[ScoreAnalysis] triggerScoreAnalysis: timer fired, calling analyzeScoresWithLLM');
+      analyzeScoresWithLLM();
+    }, 120);
+  }, [analyzeScoresWithLLM]);
+
+  // Clean up any pending analysis timer on unmount
+  useEffect(() => {
+    return () => {
+      if (analysisTimeoutRef.current) {
+        window.clearTimeout(analysisTimeoutRef.current);
+        analysisTimeoutRef.current = null;
+        console.log('[ScoreAnalysis] cleanup: cleared pending analysis timer');
+      }
+    };
+  }, []);
+
+  // Initialize scores with fallback calculation on first load
+  useEffect(() => {
+    if (messages.length === 0) {
+      setCurrentScores({ trust: 0, rapport: 0, risk: 0 });
+    }
+  }, [messages.length]);
 
   // Track and surface "gains" overlays when HUD values change
   useEffect(() => {
@@ -146,39 +222,21 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const initializeConversation = useCallback(async (deepseekApi: DeepseekApi) => {
-    setIsLoading(true);
-    try {
-      const systemPrompt = deepseekApi.getScenarioSystemPrompt(conversationData.scenarioId, conversationData.npcName);
-      // Start the first AI line directly
-      setMessages([{ id: 'ai-intro', role: 'assistant', content: '', timestamp: new Date() }]);
-      setIsStreaming(true);
-      const controller = new AbortController();
-      abortRef.current = controller;
-      let first = true;
-      await deepseekApi.chatStream([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Start the conversation naturally based on the scenario.' }
-      ], (token) => {
-        if (first) { playSfx('tokenStart'); first = false; }
-        setMessages(prev => prev.map(m => m.id === 'ai-intro' ? { ...m, content: m.content + token } : m));
-      }, controller.signal);
-      playSfx('tokenEnd');
-      setIsStreaming(false);
-    } catch (error: unknown) {
-      if ((error as Error)?.name !== 'AbortError') {
-        toast({
-          title: "Connection Error",
-          description: "Failed to start conversation. Please check your API key.",
-          variant: "destructive"
-        });
-        playSfx('error');
-      }
-    } finally {
-      setIsLoading(false);
-      abortRef.current = null;
-    }
-  }, [conversationData.scenarioId, conversationData.npcName, scenarioGoals, toast]);
+  const initializeConversation = useCallback(async (_deepseekApi: DeepseekApi) => {
+    // Hardcoded opening line per scenario (not AI-generated)
+    const openerByScenario: Record<string, (name: string) => string> = {
+      'college-party': (name) => `Hey! I noticed you across the room — I'm ${name}. This party's pretty wild, right? Want to step outside and chat for a sec?`,
+      'travel-romance': (name) => `Excuse me — you look a bit lost! I'm ${name}. This stall is my favorite; want a hand ordering something authentic?`,
+      'relationship-milestone': () => `I love how comfortable we've become lately. I've been thinking... maybe it's time we talk about taking things a bit further?`,
+      'dating-app': () => `You're even cuter in person. Our chats have been great — want to find somewhere quieter to keep talking?`,
+    };
+
+    const opener = (openerByScenario[conversationData.scenarioId] || ((_name: string) => `Hi there — good to see you. How are you feeling about tonight?`))(conversationData.npcName);
+
+    setIsLoading(false);
+    setIsStreaming(false);
+    setMessages([{ id: 'ai-intro', role: 'assistant', content: opener, timestamp: new Date() }]);
+  }, [conversationData.scenarioId, conversationData.npcName]);
 
   useEffect(() => {
     if (apiKey) {
@@ -229,12 +287,12 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
 
   // Use API key from environment variables
   useEffect(() => {
-    const envKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+    const envKey = import.meta.env.VITE_OPENAI_API_KEY;
     
     if (envKey && typeof envKey === 'string' && envKey.trim().length > 0) {
       setApiKey(envKey.trim());
     } else {
-      console.error('VITE_DEEPSEEK_API_KEY environment variable is not set or empty');
+      console.error('VITE_OPENAI_API_KEY environment variable is not set or empty');
       toast({
         title: "Configuration Error",
         description: "API key not found in environment variables. Please restart the dev server after setting your .env file.",
@@ -243,7 +301,41 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     }
   }, [toast]);
 
-  const handleSendMessage = async () => {
+  const handleEndConversation = useCallback(async (finalMessages?: Message[]) => {
+    if (!api || conversationEnded) return;
+
+    setConversationEnded(true);
+    setIsLoading(true);
+
+    try {
+      const messagesForEvaluation = finalMessages || messages;
+      const conversationHistory = messagesForEvaluation.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const evaluation = await api.evaluateScenario(
+        conversationData.scenarioId,
+        conversationHistory,
+        scenarioGoals[conversationData.scenarioId as keyof typeof scenarioGoals] || 'Complete the conversation scenario'
+      );
+
+      setEvaluation(evaluation);
+      playSfx('success');
+    } catch (error) {
+      console.error('Evaluation error:', error);
+      setEvaluation({
+        success: false,
+        score: 0,
+        feedback: "Unable to evaluate conversation.",
+        summary: "Technical error occurred during evaluation."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [api, conversationEnded, messages, conversationData.scenarioId, scenarioGoals]);
+
+  const handleSendMessage = useCallback(async () => {
     if (!userInput.trim() || !api || isLoading || conversationEnded) return;
 
     const newUserMessage: Message = {
@@ -258,6 +350,9 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     setIsLoading(true);
     setIsStreaming(true);
     playSfx('send');
+
+    // Trigger score analysis after user sends message
+    triggerScoreAnalysis();
 
     try {
       const conversationHistory = [...messages, newUserMessage];
@@ -305,36 +400,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
       setIsLoading(false);
       abortRef.current = null;
     }
-  };
-
-  const handleEndConversation = async (finalMessages?: Message[]) => {
-    if (!api || conversationEnded) return;
-
-    setConversationEnded(true);
-    setIsLoading(true);
-
-    try {
-      const conversationHistory = (finalMessages || messages).filter(msg => msg.role !== 'system');
-      const evaluation = await api.evaluateScenario(
-        conversationData.scenarioId,
-        conversationHistory.map(msg => ({ role: msg.role, content: msg.content })),
-        scenarioGoals[conversationData.scenarioId as keyof typeof scenarioGoals]
-      );
-
-      setEvaluation(evaluation);
-      if (evaluation?.success) playSfx('success'); else playSfx('error');
-    } catch (error) {
-      console.error('Evaluation failed:', error);
-      setEvaluation({
-        success: false,
-        score: 0,
-        feedback: "Unable to evaluate conversation.",
-        summary: "Technical error occurred during evaluation."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [userInput, api, isLoading, conversationEnded, messages, conversationData.scenarioId, conversationData.npcName, triggerScoreAnalysis, toast, handleEndConversation]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -362,10 +428,10 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
               You're about to enter <strong>{conversationData.setting}</strong> with <strong>{conversationData.npcName}</strong>.
             </p>
             <p className="text-sm text-gray-500">
-              Please set <code>VITE_DEEPSEEK_API_KEY</code> in your <code>.env</code> file to enable AI conversations.
+              Please set <code>VITE_OPENAI_API_KEY</code> in your <code>.env</code> file to enable AI conversations.
             </p>
             <div className="mt-4 p-3 bg-gray-100 rounded text-sm font-mono">
-              VITE_DEEPSEEK_API_KEY=your_api_key_here
+              VITE_OPENAI_API_KEY=your_api_key_here
             </div>
           </Card>
         </div>
@@ -374,26 +440,12 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-24">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-16 gap-4">
 
-          {conversationEnded && evaluation && (
-            <Button 
-              onClick={() => handleEndConversation()}
-              disabled={isLoading}
-              className="shrink-0 w-full sm:w-auto"
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              <span className="hidden sm:inline">Evaluate Again</span>
-              <span className="sm:hidden">Re-evaluate</span>
-            </Button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className={`${evaluation ? 'grid grid-cols-1 xl:grid-cols-4' : 'grid grid-cols-1'} gap-6`}>
           {/* Chat Area */}
-          <div className="xl:col-span-3">
+          <div className={evaluation ? 'xl:col-span-3' : 'max-w-4xl mx-auto'}>
             <Card className="relative h-[72vh] sm:h-[78vh] min-h-[560px] flex flex-col border-2 border-black/10 shadow-[0_4px_0_0_rgba(0,0,0,0.05)]">
               <div className="relative p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
                 <div className="flex items-center gap-3 mb-3">
@@ -402,14 +454,32 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold truncate">{conversationData.npcName}</h3>
-                    <p className="text-sm text-gray-600 truncate">AI-powered conversation</p>
+                    {/* <p className="text-sm text-gray-600 truncate">AI-powered conversation</p> */}
                   </div>
                 </div>
                 {/* Move HUD bars to a separate row for better responsiveness */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                  <HudBar label="Trust" value={trustScore} icon={<Shield className="h-3 w-3" />} gradient="linear-gradient(90deg,#22c55e,#3b82f6)" />
-                  <HudBar label="Rapport" value={rapportScore} icon={<Heart className="h-3 w-3" />} gradient="linear-gradient(90deg,#f472b6,#a78bfa)" />
-                  <HudBar label="Risk" value={riskScore} icon={<AlertTriangle className="h-3 w-3" />} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" />
+                  <HudBar 
+                    label="Trust" 
+                    value={trustScore} 
+                    icon={<Shield className="h-3 w-3" />} 
+                    gradient="linear-gradient(90deg,#22c55e,#3b82f6)" 
+                    isAnalyzing={isAnalyzingScores}
+                  />
+                  <HudBar 
+                    label="Rapport" 
+                    value={rapportScore} 
+                    icon={<Heart className="h-3 w-3" />} 
+                    gradient="linear-gradient(90deg,#f472b6,#a78bfa)" 
+                    isAnalyzing={isAnalyzingScores}
+                  />
+                  <HudBar 
+                    label="Risk" 
+                    value={riskScore} 
+                    icon={<AlertTriangle className="h-3 w-3" />} 
+                    gradient="linear-gradient(90deg,#f59e0b,#ef4444)" 
+                    isAnalyzing={isAnalyzingScores}
+                  />
                 </div>
 
                 {/* Floating gains overlay */}
@@ -549,14 +619,11 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
             </Card>
           </div>
 
-          {/* Evaluation Panel */}
-          <div className="space-y-4">
-            {/* Scenario Goal moved out of chat page to top HUD in Conversation.tsx */}
-            
-            {/* Quest Log: micro-objectives that encourage healthy communication */}
-            <QuestLog messages={messages} />
+          {/* Evaluation Panel (only after report is available) */}
+          {evaluation && (
+            <div className="space-y-4">
+              {/* Scenario Goal moved out of chat page to top HUD in Conversation.tsx */}
 
-            {evaluation && (
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   {evaluation.success ? (
@@ -571,11 +638,11 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm font-medium">Score: {evaluation.score}/100</p>
+                    <p className="text-sm font-medium">Score: {evaluation.score === null ? 'N/A' : `${evaluation.score}/100`}</p>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
                       <div 
                         className="bg-blue-500 h-2 rounded-full" 
-                        style={{ width: `${evaluation.score}%` }}
+                        style={{ width: `${evaluation.score === null ? 0 : evaluation.score}%` }}
                       />
                     </div>
                   </div>
@@ -591,17 +658,8 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                   </div>
                 </div>
               </Card>
-            )}
-
-            {conversationEnded && !evaluation && (
-              <Card className="p-4">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <p className="text-sm">Evaluating conversation...</p>
-                </div>
-              </Card>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -609,45 +667,34 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
 };
 
 // Lightweight HUD bar component
-const HudBar: React.FC<{ label: string; value: number; icon?: React.ReactNode; gradient: string }> = ({ label, value, icon, gradient }) => (
+const HudBar: React.FC<{ 
+  label: string; 
+  value: number; 
+  icon?: React.ReactNode; 
+  gradient: string; 
+  isAnalyzing?: boolean;
+}> = ({ label, value, icon, gradient, isAnalyzing = false }) => (
   <div>
     <div className="flex items-center justify-between text-[10px] text-gray-600 mb-1">
-      <span className="flex items-center gap-1">{icon}{label}</span>
+      <span className="flex items-center gap-1">
+        {icon}
+        {label}
+        {isAnalyzing && (
+          <span className="inline-block w-2 h-2 ml-1 bg-blue-500 rounded-full animate-pulse" title="AI analyzing..."></span>
+        )}
+      </span>
       <span>{Math.max(0, Math.min(100, Math.round(value)))}%</span>
     </div>
     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-      <div className="h-2 rounded-full transition-all" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: gradient }} />
+      <div 
+        className={`h-2 rounded-full transition-all ${isAnalyzing ? 'animate-pulse' : ''}`} 
+        style={{ 
+          width: `${Math.max(0, Math.min(100, value))}%`, 
+          background: gradient 
+        }} 
+      />
     </div>
   </div>
 );
 
-// Quest log component with live objectives
-const QuestLog: React.FC<{ messages: Message[] }> = ({ messages }) => {
-  const text = messages.map(m => m.content.toLowerCase()).join(' ');
-  const goals = [
-    { label: 'Affirm consent', done: text.includes('consent') },
-    { label: 'Discuss protection', done: ['protection', 'condom', 'birth control'].some(k => text.includes(k)) },
-    { label: 'Mention STI testing', done: ['sti', 'testing', 'test'].some(k => text.includes(k)) },
-    { label: 'Check comfort/boundaries', done: ['comfortable', 'comfort', 'boundary', 'boundaries'].some(k => text.includes(k)) },
-  ];
-  const completed = goals.filter(g => g.done).length;
-  return (
-    <Card className="p-4">
-      <h3 className="font-semibold mb-2">Quest Log</h3>
-      <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-        <Sparkles className="h-4 w-4 text-yellow-500" />
-        {completed}/{goals.length} completed
-      </div>
-      <ul className="space-y-2">
-        {goals.map((g, i) => (
-          <li key={i} className={`flex items-center gap-2 text-sm ${g.done ? 'text-green-700' : 'text-gray-700'}`}>
-            <span className={`inline-flex h-4 w-4 items-center justify-center rounded border ${g.done ? 'bg-green-500 text-white border-green-600' : 'bg-white border-gray-300'}`}>
-              {g.done ? <Check className="h-3 w-3" /> : null}
-            </span>
-            {g.label}
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-};
+// (Quest Log removed per request)
