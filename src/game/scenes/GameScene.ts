@@ -21,9 +21,8 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.sys.game.canvas;
     this.physics.world.setBounds(0, 0, width, height);
 
-    // Background scaled to screen
-    const bg = this.add.image(width / 2, height / 2, 'campus-bg');
-    bg.setDisplaySize(width, height);
+    // Create stylized campus background
+    this.createStyledCampusBackground(width, height);
 
     // Add atmospheric elements
     this.createAtmosphere();
@@ -33,6 +32,121 @@ export class GameScene extends Phaser.Scene {
     this.setupManagers();
     this.setupCollisions();
     this.createUI();
+  }
+
+  private createStyledCampusBackground(width: number, height: number): void {
+    // Sky gradient background
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x87CEEB, 0x87CEEB, 0x98FB98, 0x98FB98);
+    bg.fillRect(0, 0, width, height);
+
+    // Main campus building (stylized)
+    const building = this.add.graphics();
+    building.fillStyle(0x8B4513);
+    building.fillRect(width * 0.2, height * 0.25, width * 0.6, height * 0.4);
+    
+    // Building details
+    building.fillStyle(0xA0522D);
+    building.fillRect(width * 0.22, height * 0.27, width * 0.56, height * 0.36);
+    
+    // Windows
+    building.fillStyle(0x4682B4);
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 3; j++) {
+        building.fillRect(
+          width * 0.24 + i * (width * 0.52 / 8), 
+          height * 0.3 + j * (height * 0.1),
+          width * 0.04,
+          height * 0.06
+        );
+      }
+    }
+    
+    // Central tower/spire
+    building.fillStyle(0x8B4513);
+    building.fillRect(width * 0.47, height * 0.1, width * 0.06, height * 0.2);
+    
+    // Tower roof
+    building.fillStyle(0xB22222);
+    const tower = new Phaser.Geom.Triangle(
+      width * 0.44, height * 0.1,
+      width * 0.5, height * 0.05,
+      width * 0.56, height * 0.1
+    );
+    building.fillTriangleShape(tower);
+
+    // Campus lawn (large green area)
+    const lawn = this.add.graphics();
+    lawn.fillStyle(0x228B22);
+    lawn.fillRect(0, height * 0.65, width, height * 0.35);
+    
+    // Add some texture to the lawn
+    lawn.fillStyle(0x32CD32, 0.3);
+    for (let i = 0; i < 20; i++) {
+      lawn.fillCircle(
+        Math.random() * width,
+        height * 0.7 + Math.random() * height * 0.25,
+        5 + Math.random() * 10
+      );
+    }
+
+    // Campus pathways
+    const paths = this.add.graphics();
+    paths.fillStyle(0xDEB887);
+    paths.fillRect(width * 0.45, height * 0.65, width * 0.1, height * 0.35);
+    paths.fillRect(0, height * 0.78, width, height * 0.05);
+
+    // Decorative campus trees
+    for (let i = 0; i < 6; i++) {
+      const treeX = (i / 5) * width * 0.8 + width * 0.1;
+      const treeY = height * 0.7 + Math.random() * height * 0.1;
+      this.createCampusTree(treeX, treeY);
+    }
+
+    // Campus benches
+    for (let i = 0; i < 3; i++) {
+      const benchX = width * 0.2 + i * width * 0.3;
+      const benchY = height * 0.75;
+      this.createBench(benchX, benchY);
+    }
+  }
+
+  private createCampusTree(x: number, y: number): void {
+    // Tree trunk
+    const trunk = this.add.graphics();
+    trunk.fillStyle(0x8B4513);
+    trunk.fillRect(x - 4, y, 8, 25);
+    
+    // Tree foliage (multiple circles for fuller look)
+    const foliage = this.add.graphics();
+    foliage.fillStyle(0x228B22);
+    foliage.fillCircle(x, y - 5, 18);
+    foliage.fillStyle(0x32CD32, 0.7);
+    foliage.fillCircle(x - 10, y, 12);
+    foliage.fillCircle(x + 10, y, 12);
+    foliage.fillCircle(x, y - 15, 10);
+    
+    // Add gentle sway animation
+    this.tweens.add({
+      targets: [trunk, foliage],
+      rotation: 0.03,
+      duration: 3000 + Math.random() * 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  private createBench(x: number, y: number): void {
+    const bench = this.add.graphics();
+    bench.fillStyle(0x654321);
+    // Bench seat
+    bench.fillRect(x - 15, y, 30, 4);
+    // Bench back
+    bench.fillRect(x - 15, y - 8, 30, 2);
+    // Bench legs
+    bench.fillRect(x - 12, y, 2, 6);
+    bench.fillRect(x + 10, y, 2, 6);
   }
 
   private createAtmosphere(): void {
