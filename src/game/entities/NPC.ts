@@ -5,6 +5,7 @@ export class NPC extends Phaser.GameObjects.Sprite {
   private interactionPrompt?: Phaser.GameObjects.Image;
   private idleTimer: number = 0;
   private readonly idleInterval: number = 3000;
+  private readonly baseScale: number = 1.35;
 
   public dialogue: string[];
   public scenarioId: string;
@@ -27,7 +28,8 @@ export class NPC extends Phaser.GameObjects.Sprite {
     this.dialogue = dialogue;
     this.scenarioId = scenarioId;
     
-    this.setScale(1.2);
+    // Slightly larger default size
+    this.setScale(this.baseScale);
     this.setDepth(5);
     
     // Set up physics
@@ -46,11 +48,11 @@ export class NPC extends Phaser.GameObjects.Sprite {
   }
 
   private startIdleAnimation(): void {
-    // Gentle breathing animation
+    // Gentle breathing animation (relative to base scale)
     this.scene.tweens.add({
       targets: this,
-      scaleX: 1.15,
-      scaleY: 1.25,
+      scaleX: { from: this.baseScale * 0.9583, to: this.baseScale * 1.0417 },
+      scaleY: { from: this.baseScale * 0.9583, to: this.baseScale * 1.0417 },
       duration: 2000,
       ease: 'Sine.easeInOut',
       yoyo: true,
@@ -122,11 +124,11 @@ export class NPC extends Phaser.GameObjects.Sprite {
         });
       },
       () => {
-        // Scale pulse
+        // Scale pulse (relative to base scale)
         this.scene.tweens.add({
           targets: this,
-          scaleX: 1.3,
-          scaleY: 1.4,
+          scaleX: this.baseScale * 1.0833,
+          scaleY: this.baseScale * 1.1667,
           duration: 300,
           yoyo: true,
           ease: 'Back.easeOut'

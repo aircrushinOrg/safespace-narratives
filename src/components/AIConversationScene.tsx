@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, ArrowLeft, CheckCircle, XCircle, Square, Shield, Heart, AlertTriangle } from 'lucide-react';
+import { Loader2, Send, ArrowLeft, CheckCircle, XCircle, Square, Shield, Heart, AlertTriangle, Sparkles, Flame, Dice6, Check } from 'lucide-react';
 import { DeepseekApi } from '@/services/deepseekApi';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,6 +47,12 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+  
+  // Gamified overlays state
+  const prevScoresRef = useRef<{ trust: number; rapport: number; risk: number }>({ trust: 0, rapport: 0, risk: 0 });
+  const [gains, setGains] = useState<Array<{ id: string; label: string; delta: number }>>([]);
+  const [combo, setCombo] = useState(0);
+  const lastComboAtRef = useRef<number>(0);
 
   // Lightweight WebAudio synth for SFX
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -100,6 +105,25 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     return Math.min(100, Math.round((hits / 6) * 100));
   })();
 
+  // Track and surface "gains" overlays when HUD values change
+  useEffect(() => {
+    const prev = prevScoresRef.current;
+    const addGain = (label: string, delta: number) => {
+      if (!delta) return;
+      const id = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setGains((g) => [...g, { id, label, delta }]);
+      // Auto-remove after animation
+      setTimeout(() => setGains((g) => g.filter((x) => x.id !== id)), 1400);
+    };
+    const dTrust = Math.max(0, trustScore - prev.trust);
+    const dRapport = Math.max(0, rapportScore - prev.rapport);
+    const dRisk = Math.max(0, prev.risk - riskScore); // lower risk is good
+    if (dTrust) addGain('Trust', dTrust);
+    if (dRapport) addGain('Rapport', dRapport);
+    if (dRisk) addGain('Risk ↓', dRisk);
+    prevScoresRef.current = { trust: trustScore, rapport: rapportScore, risk: riskScore };
+  }, [trustScore, rapportScore, riskScore]);
+
   const scenarioGoals = useMemo(() => ({
     'college-party': 'Practice discussing safety, consent, and responsible decision-making at parties',
     'travel-romance': 'Navigate health considerations and safety while traveling internationally', 
@@ -113,6 +137,11 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     "Maybe we should slow down and get to know each other better first."
   ], []);
 
+  const randomSuggestion = useCallback(() => {
+    const idx = Math.floor(Math.random() * suggestions.length);
+    setUserInput(suggestions[idx]);
+  }, [suggestions]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -121,14 +150,8 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
     setIsLoading(true);
     try {
       const systemPrompt = deepseekApi.getScenarioSystemPrompt(conversationData.scenarioId, conversationData.npcName);
-      // Start with scenario banner, then stream the first AI line
-      const intro: Message = {
-        id: 'intro',
-        role: 'system',
-        content: `Scenario: ${scenarioGoals[conversationData.scenarioId as keyof typeof scenarioGoals]}`,
-        timestamp: new Date()
-      };
-      setMessages([intro, { id: 'ai-intro', role: 'assistant', content: '', timestamp: new Date() }]);
+      // Start the first AI line directly
+      setMessages([{ id: 'ai-intro', role: 'assistant', content: '', timestamp: new Date() }]);
       setIsStreaming(true);
       const controller = new AbortController();
       abortRef.current = controller;
@@ -167,6 +190,27 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+
+  // Simple combo system: consecutive helpful messages increase streak
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const last = messages[messages.length - 1];
+    if (last.role !== 'user') return;
+    const text = last.content.toLowerCase();
+    const helpful = ['consent', 'boundary', 'boundaries', 'protection', 'condom', 'sti', 'testing', 'safe', 'comfortable', 'birth control'].some(k => text.includes(k));
+    const now = Date.now();
+    if (helpful) {
+      // within 20s window continues combo
+      if (now - lastComboAtRef.current < 20000) {
+        setCombo((c) => Math.min(9, c + 1));
+      } else {
+        setCombo(1);
+      }
+      lastComboAtRef.current = now;
+    } else if (now - lastComboAtRef.current > 20000) {
+      setCombo(0);
+    }
   }, [messages]);
 
   // Quick-select suggestions via keyboard 1/2/3
@@ -342,11 +386,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
             <span className="hidden sm:inline">Back to Game</span>
             <span className="sm:hidden">Back</span>
           </Button>
-          
-          <Badge variant="secondary" className="text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 mx-auto sm:mx-0">
-            {conversationData.setting}
-          </Badge>
-          
+
           {conversationEnded && evaluation && (
             <Button 
               onClick={() => handleEndConversation()}
@@ -363,8 +403,8 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Chat Area */}
           <div className="xl:col-span-2">
-            <Card className="h-[500px] sm:h-[600px] flex flex-col">
-              <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+            <Card className="relative h-[72vh] sm:h-[78vh] min-h-[560px] flex flex-col border-2 border-black/10 shadow-[0_4px_0_0_rgba(0,0,0,0.05)]">
+              <div className="relative p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white font-semibold float-y shadow-md">
                     {conversationData.npcName[0]}
@@ -380,16 +420,33 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                   <HudBar label="Rapport" value={rapportScore} icon={<Heart className="h-3 w-3" />} gradient="linear-gradient(90deg,#f472b6,#a78bfa)" />
                   <HudBar label="Risk" value={riskScore} icon={<AlertTriangle className="h-3 w-3" />} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" />
                 </div>
+
+                {/* Floating gains overlay */}
+                <div className="pointer-events-none absolute right-3 top-3 space-y-1">
+                  {gains.map(g => (
+                    <div key={g.id} className="flex items-center gap-1 rounded bg-black/40 px-2 py-0.5 text-[11px] text-white shadow-sm animate-pulse">
+                      <Sparkles className="h-3 w-3 text-yellow-300" />
+                      <span>{g.label} +{Math.min(99, g.delta)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Combo badge */}
+                {combo > 1 && (
+                  <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-6 flex items-center gap-1 rounded-full bg-rose-600 text-white px-3 py-1 text-xs shadow">
+                    <Flame className="h-4 w-4" /> Combo x{combo}
+                  </div>
+                )}
               </div>
               
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.7),rgba(255,255,255,0))]">
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} fade-in-up`}
                   >
                     <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
+                      className={`max-w-[80%] p-3 rounded-lg border border-black/5 shadow-sm text-sm ${
                         message.role === 'user'
                           ? 'bg-blue-500 text-white'
                           : message.role === 'system'
@@ -397,14 +454,25 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{message.content}{message.role === 'assistant' && isStreaming && message.id === messages[messages.length - 1]?.id ? <span className="blinking-cursor">▍</span> : null}</p>
-                      <p className="text-xs mt-1 opacity-70">
+                      <p className="whitespace-pre-wrap leading-snug">{message.content}{message.role === 'assistant' && isStreaming && message.id === messages[messages.length - 1]?.id ? <span className="blinking-cursor">▍</span> : null}</p>
+                      <p className="text-[11px] mt-1 opacity-70">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
                 ))}
                 
+                {/* Typing indicator when AI is streaming */}
+                {isStreaming && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 text-gray-600 px-3 py-2 rounded-lg border border-black/5 shadow-sm inline-flex items-center gap-1">
+                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.2s]"></span>
+                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    </div>
+                  </div>
+                )}
+
                 {isLoading && !isStreaming && (
                   <div className="flex justify-start">
                     <div className="bg-gray-100 p-3 rounded-lg">
@@ -418,7 +486,7 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
               {!conversationEnded && (
                 <div className="p-4 border-t space-y-3">
                   {/* Quick suggestions to guide healthy communication */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {suggestions.map((s, i) => (
                       <Button
                         key={i}
@@ -433,6 +501,16 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
                         <span className="truncate">"{s}"</span>
                       </Button>
                     ))}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={randomSuggestion}
+                      disabled={isLoading || isStreaming}
+                      title="Pick a random suggestion"
+                      className="shrink-0"
+                    >
+                      <Dice6 className="h-4 w-4 mr-1" /> Hint
+                    </Button>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
@@ -482,12 +560,10 @@ export const AIConversationScene: React.FC<AIConversationSceneProps> = ({
 
           {/* Evaluation Panel */}
           <div className="space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Scenario Goal</h3>
-              <p className="text-sm text-gray-600">
-                {scenarioGoals[conversationData.scenarioId as keyof typeof scenarioGoals]}
-              </p>
-            </Card>
+            {/* Scenario Goal moved out of chat page to top HUD in Conversation.tsx */}
+            
+            {/* Quest Log: micro-objectives that encourage healthy communication */}
+            <QuestLog messages={messages} />
 
             {evaluation && (
               <Card className="p-4">
@@ -553,3 +629,34 @@ const HudBar: React.FC<{ label: string; value: number; icon?: React.ReactNode; g
     </div>
   </div>
 );
+
+// Quest log component with live objectives
+const QuestLog: React.FC<{ messages: Message[] }> = ({ messages }) => {
+  const text = messages.map(m => m.content.toLowerCase()).join(' ');
+  const goals = [
+    { label: 'Affirm consent', done: text.includes('consent') },
+    { label: 'Discuss protection', done: ['protection', 'condom', 'birth control'].some(k => text.includes(k)) },
+    { label: 'Mention STI testing', done: ['sti', 'testing', 'test'].some(k => text.includes(k)) },
+    { label: 'Check comfort/boundaries', done: ['comfortable', 'comfort', 'boundary', 'boundaries'].some(k => text.includes(k)) },
+  ];
+  const completed = goals.filter(g => g.done).length;
+  return (
+    <Card className="p-4">
+      <h3 className="font-semibold mb-2">Quest Log</h3>
+      <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+        <Sparkles className="h-4 w-4 text-yellow-500" />
+        {completed}/{goals.length} completed
+      </div>
+      <ul className="space-y-2">
+        {goals.map((g, i) => (
+          <li key={i} className={`flex items-center gap-2 text-sm ${g.done ? 'text-green-700' : 'text-gray-700'}`}>
+            <span className={`inline-flex h-4 w-4 items-center justify-center rounded border ${g.done ? 'bg-green-500 text-white border-green-600' : 'bg-white border-gray-300'}`}>
+              {g.done ? <Check className="h-3 w-3" /> : null}
+            </span>
+            {g.label}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+};

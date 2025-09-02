@@ -394,7 +394,14 @@ export class GameScene extends Phaser.Scene {
 
   private createPlayer(): void {
     const { width, height } = this.sys.game.canvas;
-    this.player = new Player(this, width / 2, height * 0.83);
+    // Spawn the player on the campus path (bottom horizontal path band)
+    const tile = 16;
+    const cols = Math.ceil(width / tile);
+    const rows = Math.ceil(height / tile);
+    const hRowBottom = Math.floor(rows * 0.65);
+    const spawnX = Math.floor(width * 0.5); // middle of screen
+    const spawnY = hRowBottom * tile + Math.floor(tile / 2); // center of tile row
+    this.player = new Player(this, spawnX, spawnY);
     this.add.existing(this.player);
     this.physics.add.existing(this.player);
   }
