@@ -152,10 +152,6 @@ export class GameScene extends Phaser.Scene {
   private createAtmosphere(): void {
     const { width, height } = this.sys.game.canvas;
     
-    // Trees positioned relative to screen size
-    const tree1 = this.add.image(width * 0.85, height * 0.87, 'tree').setScale(0.8).setDepth(1);
-    const tree2 = this.add.image(width * 0.225, height * 0.8, 'tree').setScale(0.6).setDepth(1);
-
     // Floating particles with physics
     const particles = this.add.particles(0, 0, 'tree', {
       scale: { start: 0.02, end: 0.01 },
@@ -170,16 +166,6 @@ export class GameScene extends Phaser.Scene {
     });
 
     particles.setDepth(-1);
-
-    // Animate trees gently
-    this.tweens.add({
-      targets: [tree1, tree2],
-      angle: { from: -2, to: 2 },
-      duration: 4000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
   }
 
   private createPlayer(): void {
