@@ -125,20 +125,8 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Walking animation keyframes for different directions */
-  @keyframes walk-horizontal {
-    0%, 100% {
-      transform: translateY(0px) translateX(0px);
-    }
-    25% {
-      transform: translateY(-2px) translateX(-1px);
-    }
-    75% {
-      transform: translateY(-2px) translateX(1px);
-    }
-  }
-
-  @keyframes walk-vertical {
+  /* Walking animation keyframe */
+  @keyframes walk {
     0%, 100% {
       transform: translateY(0px);
     }
@@ -147,38 +135,8 @@ All colors MUST be HSL.
     }
   }
 
-  @keyframes walk-up {
-    0%, 100% {
-      transform: translateY(0px) scale(1);
-    }
-    50% {
-      transform: translateY(-3px) scale(0.95);
-    }
-  }
-
-  @keyframes walk-down {
-    0%, 100% {
-      transform: translateY(0px) scale(1);
-    }
-    50% {
-      transform: translateY(-2px) scale(1.05);
-    }
-  }
-
   /* Animation classes */
   .animate-walk {
-    animation: walk-vertical 0.6s ease-in-out infinite;
-  }
-  
-  .animate-walk-horizontal {
-    animation: walk-horizontal 0.5s ease-in-out infinite;
-  }
-  
-  .animate-walk-up {
-    animation: walk-up 0.7s ease-in-out infinite;
-  }
-  
-  .animate-walk-down {
-    animation: walk-down 0.5s ease-in-out infinite;
+    animation: walk 0.6s ease-in-out infinite;
   }
 }
