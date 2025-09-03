@@ -14,6 +14,8 @@ export class GameScene extends Phaser.Scene {
   private worldWidth: number = 0;
   private worldHeight: number = 0;
   private interactBtn?: Phaser.GameObjects.Container;
+  private autoTriggerNPC: NPC | null = null;
+  private autoTriggerTime: number | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -666,13 +668,15 @@ export class GameScene extends Phaser.Scene {
 
   // Create a mobile-friendly interact button that appears when near an NPC
   private ensureInteractButton(): void {
+    // Do not create the button on touch devices; we auto-trigger instead
+    const isTouch = this.sys.game.device.input.touch;
+    if (isTouch) return;
     if (this.interactBtn) return;
     const cam = this.cameras.main;
     const btn = this.add.container(cam.width - 90, cam.height - 70);
     btn.setScrollFactor(0);
     btn.setDepth(120);
 
-    const isTouch = this.sys.game.device.input.touch;
     const bg = this.add.rectangle(0, 0, 140, 48, 0x28a745, 0.9);
     bg.setStrokeStyle(2, 0xffffff, 0.95);
     const label = this.add.text(0, 0, 'Start Chat', { fontSize: '18px', color: '#ffffff' }).setOrigin(0.5);
@@ -746,14 +750,34 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Show/hide mobile interact button based on proximity
+    // Mobile: auto-trigger with a short proximity delay; Desktop: show/hide button
     this.ensureInteractButton();
     const nearby = this.getNearbyNPC();
-    if (this.interactBtn) {
-      const isTouch = this.sys.game.device.input.touch;
-      const shouldShow = isTouch && !!nearby && !this.dialogManager.isActive();
+    const isTouch = this.sys.game.device.input.touch;
+
+    if (isTouch) {
+      if (!this.dialogManager.isActive()) {
+        if (nearby) {
+          if (this.autoTriggerNPC !== nearby) {
+            this.autoTriggerNPC = nearby;
+            this.autoTriggerTime = this.time.now + 150; // 150ms debounce
+          } else if (this.autoTriggerTime !== null && this.time.now >= this.autoTriggerTime) {
+            this.dialogManager.startDialog(nearby);
+            this.sound.play('interact', { volume: 0.3 });
+            this.autoTriggerNPC = null;
+            this.autoTriggerTime = null;
+          }
+        } else {
+          this.autoTriggerNPC = null;
+          this.autoTriggerTime = null;
+        }
+      } else {
+        this.autoTriggerNPC = null;
+        this.autoTriggerTime = null;
+      }
+    } else if (this.interactBtn) {
+      const shouldShow = !!nearby && !this.dialogManager.isActive();
       this.interactBtn.setVisible(shouldShow);
-      // keep bottom-right anchoring on resize
       const cam = this.cameras.main;
       this.interactBtn.setPosition(cam.width - 90, cam.height - 70);
     }
