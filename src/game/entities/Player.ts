@@ -7,6 +7,7 @@ export class Player extends Phaser.GameObjects.Sprite {
   private isMoving: boolean = false;
   private footstepTimer: number = 0;
   private readonly footstepInterval: number = 400;
+  private moveTarget?: Phaser.Math.Vector2 | null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player-idle-0');
@@ -58,6 +59,26 @@ export class Player extends Phaser.GameObjects.Sprite {
       this.isMoving = true;
     }
 
+    // If no keyboard input, use click/tap move target
+    if (velocityX === 0 && velocityY === 0 && this.moveTarget) {
+      const dx = this.moveTarget.x - this.x;
+      const dy = this.moveTarget.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 6) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        velocityX = nx * this.speed;
+        velocityY = ny * this.speed;
+        this.isMoving = true;
+        this.setFlipX(velocityX < 0);
+      } else {
+        // Arrived at destination
+        this.moveTarget = null;
+        velocityX = 0;
+        velocityY = 0;
+      }
+    }
+
     // Apply movement
     body.setVelocity(velocityX, velocityY);
 
@@ -76,6 +97,14 @@ export class Player extends Phaser.GameObjects.Sprite {
     if (velocityX !== 0 && velocityY !== 0) {
       body.setVelocity(velocityX * 0.707, velocityY * 0.707);
     }
+  }
+
+  public setMoveTarget(x: number, y: number): void {
+    this.moveTarget = new Phaser.Math.Vector2(x, y);
+  }
+
+  public clearMoveTarget(): void {
+    this.moveTarget = null;
   }
 
   private updateFootsteps(): void {

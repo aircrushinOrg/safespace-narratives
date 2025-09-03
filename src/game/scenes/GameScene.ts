@@ -502,6 +502,20 @@ export class GameScene extends Phaser.Scene {
       }
     };
 
+    // Tap-to-move: set player target and show a quick marker
+    this.inputManager.onMoveTo = (x: number, y: number) => {
+      if (this.dialogManager.isActive()) return;
+      // Ignore taps on fixed HUD areas like the minimap
+      const cam = this.cameras.main;
+      const screenX = x - cam.scrollX;
+      const screenY = y - cam.scrollY;
+      if (screenX >= 20 && screenX <= 180 && screenY >= 20 && screenY <= 130) {
+        return; // inside minimap bounds; ignore for movement
+      }
+      this.player.setMoveTarget(x, y);
+      this.createTapMarker(x, y);
+    };
+
     // Set up dialog callback
     this.dialogManager.onScenarioStart = (scenarioId: string) => {
       const npc = this.npcs.find(n => n.scenarioId === scenarioId);
@@ -509,6 +523,22 @@ export class GameScene extends Phaser.Scene {
         this.startScenario(npc);
       }
     };
+  }
+
+  private createTapMarker(x: number, y: number): void {
+    const g = this.add.graphics();
+    g.setDepth(50);
+    g.lineStyle(2, 0xffffff, 0.9);
+    g.strokeCircle(x, y, 8);
+    g.lineStyle(2, 0x2A9D8F, 0.9);
+    g.strokeCircle(x, y, 14);
+    this.tweens.add({
+      targets: g,
+      alpha: { from: 1, to: 0 },
+      scale: { from: 1, to: 1.4 },
+      duration: 350,
+      onComplete: () => g.destroy()
+    });
   }
 
   private setupCollisions(): void {
@@ -581,7 +611,7 @@ export class GameScene extends Phaser.Scene {
     });
     
     // Enhanced instructions with beautiful styling
-    const instructions = this.add.text(width / 2, height - 35, '✨ Use WASD or Arrow Keys to move • Press SPACE/ENTER to interact with NPCs ✨', {
+    const instructions = this.add.text(width / 2, height - 35, '✨ Tap to move • Use WASD/Arrows on desktop • Press SPACE/ENTER to interact ✨', {
       fontSize: '18px',
       color: '#FFE4B5',
       backgroundColor: '#FF6B9D99',
