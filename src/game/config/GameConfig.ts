@@ -8,6 +8,8 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   backgroundColor: '#2c5530',
   parent: 'phaser-game',
+  // Improve rendering on high-DPI screens without going overboard
+  resolution: Math.min(window.devicePixelRatio || 1, 2),
   physics: {
     default: 'arcade',
     arcade: {

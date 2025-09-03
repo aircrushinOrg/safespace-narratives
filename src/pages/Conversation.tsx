@@ -85,10 +85,10 @@ const Conversation: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative h-safe-screen pb-[env(safe-area-inset-bottom)]">
       {/* Game HUD Overlay */}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-40">
-        <div className="mx-auto max-w-5xl px-4 pt-3">
+        <div className="mx-auto max-w-5xl px-3 sm:px-4 pt-[env(safe-area-inset-top)] sm:pt-3">
           <div className="flex items-center justify-between gap-3 rounded-xl border border-black/10 bg-gradient-to-r from-slate-900/80 to-slate-800/80 p-2 shadow-md backdrop-blur">
             {/* Left: Pause/Back */}
             <div className="pointer-events-auto">
@@ -102,7 +102,7 @@ const Conversation: React.FC = () => {
                 {conversationData.npcName[0]}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{conversationData.npcName}</div>
+                <div className="truncate text-xs sm:text-sm font-semibold">{conversationData.npcName}</div>
                 <div className="truncate text-[11px] text-slate-300">{conversationData.setting}</div>
               </div>
             </div>
@@ -129,9 +129,9 @@ const Conversation: React.FC = () => {
       {/* Core Conversation Scene */}
       <AIConversationScene conversationData={conversationData} onBack={handleBack} />
 
-      {/* Controls hint */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40">
-        <div className="mx-auto flex max-w-5xl items-center justify-center gap-2 px-4">
+      {/* Controls hint (desktop only); hide on mobile to avoid covering input */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 hidden sm:block mb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex max-w-5xl items-center justify-center gap-2 px-4 mb-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-200 shadow backdrop-blur">
             <Gamepad2 className="h-3.5 w-3.5 opacity-80" />
             <span className="opacity-80">Enter = Send</span>

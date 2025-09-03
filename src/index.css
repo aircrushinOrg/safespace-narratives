@@ -121,10 +121,26 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    height: 100%;
+    overflow: hidden; /* prevent mobile scroll bounce over canvas */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, #root {
+    height: 100%;
   }
 }
 
 @layer utilities {
+  /* Use dynamic viewport height on modern browsers */
+  .h-safe-screen {
+    height: 100dvh;
+  }
+
+  /* Improve touch behavior for game canvas */
+  #phaser-game, canvas {
+    touch-action: none; /* disable double-tap zoom/scroll during gameplay */
+  }
   /* Walking animation keyframe */
   @keyframes walk {
     0%, 100% {

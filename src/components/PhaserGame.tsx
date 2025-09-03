@@ -61,7 +61,7 @@ export const PhaserGame: React.FC<PhaserGameProps> = ({ onBack, onScenarioSelect
     <div className="fixed inset-0 w-full h-full bg-black">
       <div 
         ref={gameRef} 
-        className="w-full h-full"
+        className="w-full h-full h-safe-screen"
         id="phaser-game"
       />
     </div>

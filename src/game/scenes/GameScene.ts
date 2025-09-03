@@ -13,6 +13,7 @@ export class GameScene extends Phaser.Scene {
   private interactionZones!: Phaser.Physics.Arcade.Group;
   private worldWidth: number = 0;
   private worldHeight: number = 0;
+  private interactBtn?: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -480,6 +481,18 @@ export class GameScene extends Phaser.Scene {
       this.add.existing(npc);
       this.physics.add.existing(npc);
 
+      // Allow tapping the NPC to interact on mobile
+      npc.setInteractive({ useHandCursor: true });
+      npc.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        // stop propagation so it doesn't trigger tap-to-move
+        (pointer.event as any)?.stopPropagation?.();
+        const nearbyNPC = this.getNearbyNPC();
+        if (nearbyNPC && !this.dialogManager.isActive()) {
+          this.dialogManager.startDialog(nearbyNPC);
+          this.sound.play('interact', { volume: 0.3 });
+        }
+      });
+
       // Create interaction zone
       const zone = this.physics.add.sprite(data.x, data.y, null);
       zone.setVisible(false);
@@ -511,6 +524,20 @@ export class GameScene extends Phaser.Scene {
       const screenY = y - cam.scrollY;
       if (screenX >= 20 && screenX <= 180 && screenY >= 20 && screenY <= 130) {
         return; // inside minimap bounds; ignore for movement
+      }
+      // Ignore taps on the mobile "Start Chat" button area
+      if (this.interactBtn && this.interactBtn.visible) {
+        const bx = cam.width - 90;
+        const by = cam.height - 70;
+        const bw = 140;
+        const bh = 48;
+        const left = bx - bw / 2;
+        const right = bx + bw / 2;
+        const top = by - bh / 2;
+        const bottom = by + bh / 2;
+        if (screenX >= left && screenX <= right && screenY >= top && screenY <= bottom) {
+          return; // inside interact button; ignore for movement
+        }
       }
       this.player.setMoveTarget(x, y);
       this.createTapMarker(x, y);
@@ -568,19 +595,22 @@ export class GameScene extends Phaser.Scene {
 
   private createUI(): void {
     const { width, height } = this.sys.game.canvas;
+    const isSmall = Math.min(width, height) < 480;
+    const mapW = Math.max(120, Math.min(180, Math.floor(width * 0.36)));
+    const mapH = Math.floor(mapW * 0.6875); // maintain aspect ratio similar to 160x110
     
     // Enhanced mini-map with magical border
     const miniMap = this.add.graphics();
     miniMap.fillGradientStyle(0x000022, 0x000022, 0x001133, 0x001133);
-    miniMap.fillRoundedRect(20, 20, 160, 110, 8);
+    miniMap.fillRoundedRect(20, 20, mapW, mapH, 8);
     miniMap.lineStyle(3, 0xFF6B9D, 1);
-    miniMap.strokeRoundedRect(20, 20, 160, 110, 8);
+    miniMap.strokeRoundedRect(20, 20, mapW, mapH, 8);
     // Keep UI fixed on screen
     miniMap.setScrollFactor(0);
     
     // Add minimap glow
     miniMap.lineStyle(1, 0xFFFFFF, 0.5);
-    miniMap.strokeRoundedRect(18, 18, 164, 114, 10);
+    miniMap.strokeRoundedRect(18, 18, mapW + 4, mapH + 4, 10);
     
     // Enhanced player dot with glow effect
     const playerDot = this.add.graphics();
@@ -605,14 +635,16 @@ export class GameScene extends Phaser.Scene {
     this.events.on('postupdate', () => {
       const worldW = this.worldWidth || width;
       const worldH = this.worldHeight || height;
-      const mapX = 30 + (this.player.x / worldW) * 140;
-      const mapY = 30 + (this.player.y / worldH) * 90;
+      const mapX = 30 + (this.player.x / worldW) * (mapW - 20);
+      const mapY = 30 + (this.player.y / worldH) * (mapH - 20);
       playerDot.setPosition(mapX, mapY);
     });
     
     // Enhanced instructions with beautiful styling
-    const instructions = this.add.text(width / 2, height - 35, '✨ Tap to move • Use WASD/Arrows on desktop • Press SPACE/ENTER to interact ✨', {
-      fontSize: '18px',
+    const instructions = this.add.text(width / 2, height - (isSmall ? 28 : 35), isSmall
+      ? '✨ Tap to move • Tap NPC to interact ✨'
+      : '✨ Tap to move • Use WASD/Arrows • Press SPACE/ENTER to interact ✨', {
+      fontSize: isSmall ? '14px' : '18px',
       color: '#FFE4B5',
       backgroundColor: '#FF6B9D99',
       padding: { x: 15, y: 8 },
@@ -630,6 +662,39 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
+  }
+
+  // Create a mobile-friendly interact button that appears when near an NPC
+  private ensureInteractButton(): void {
+    if (this.interactBtn) return;
+    const cam = this.cameras.main;
+    const btn = this.add.container(cam.width - 90, cam.height - 70);
+    btn.setScrollFactor(0);
+    btn.setDepth(120);
+
+    const isTouch = this.sys.game.device.input.touch;
+    const bg = this.add.rectangle(0, 0, 140, 48, 0x28a745, 0.9);
+    bg.setStrokeStyle(2, 0xffffff, 0.95);
+    const label = this.add.text(0, 0, 'Start Chat', { fontSize: '18px', color: '#ffffff' }).setOrigin(0.5);
+    btn.add([bg, label]);
+    btn.setVisible(false);
+
+    bg.setInteractive({ useHandCursor: true }).on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Stop the global tap-to-move handler from firing
+      const evt: any = pointer && (pointer.event as any);
+      try {
+        evt?.stopPropagation?.();
+        evt && (evt.cancelBubble = true);
+        evt?.preventDefault?.();
+      } catch {}
+      const nearbyNPC = this.getNearbyNPC();
+      if (nearbyNPC && !this.dialogManager.isActive()) {
+        this.dialogManager.startDialog(nearbyNPC);
+        this.sound.play('interact', { volume: 0.3 });
+      }
+    });
+
+    this.interactBtn = btn;
   }
 
   private getNearbyNPC(): NPC | null {
@@ -680,5 +745,17 @@ export class GameScene extends Phaser.Scene {
         npc.update();
       }
     });
+
+    // Show/hide mobile interact button based on proximity
+    this.ensureInteractButton();
+    const nearby = this.getNearbyNPC();
+    if (this.interactBtn) {
+      const isTouch = this.sys.game.device.input.touch;
+      const shouldShow = isTouch && !!nearby && !this.dialogManager.isActive();
+      this.interactBtn.setVisible(shouldShow);
+      // keep bottom-right anchoring on resize
+      const cam = this.cameras.main;
+      this.interactBtn.setPosition(cam.width - 90, cam.height - 70);
+    }
   }
 }

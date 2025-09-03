@@ -31,33 +31,40 @@ export class DialogManager {
     if (!this.currentNPC) return;
 
     // Create container
-    this.dialogContainer = this.scene.add.container(400, 500);
+    const { width: screenW, height: screenH } = this.scene.scale;
+    this.dialogContainer = this.scene.add.container(screenW / 2, screenH / 2);
     this.dialogContainer.setDepth(200);
+    this.dialogContainer.setScrollFactor(0); // pin to camera/screen
 
     // Background
     const bg = this.scene.add.image(0, 0, 'dialog-bg');
-    bg.setScale(2, 1);
+    const dialogW = Math.min(720, Math.floor(screenW * 0.92));
+    const dialogH = Math.min(320, Math.floor(screenH * 0.56));
+    bg.setDisplaySize(dialogW, dialogH);
 
     // NPC portrait
-    const portrait = this.scene.add.image(-350, -20, `npc-${this.currentNPC.spriteKey}`);
-    portrait.setScale(2);
+    const hasRoomForPortrait = dialogW >= 560;
+    const portrait = this.scene.add.image(-dialogW / 2 + (hasRoomForPortrait ? 110 : 0), -20, `npc-${this.currentNPC.spriteKey}`);
+    portrait.setScale(hasRoomForPortrait ? 1.6 : 1.1);
+    portrait.setVisible(hasRoomForPortrait);
 
     // Name text
-    const nameText = this.scene.add.text(-300, -60, this.currentNPC.npcName, {
-      fontSize: '20px',
+    const nameText = this.scene.add.text(-dialogW / 2 + 24, -dialogH / 2 + 20, this.currentNPC.npcName, {
+      fontSize: screenW < 480 ? '16px' : '20px',
       fontStyle: 'bold',
       color: '#4A90E2'
     });
 
     // Dialog text (will be updated)
-    const dialogText = this.scene.add.text(-300, -30, '', {
-      fontSize: '16px',
+    const wrapWidth = hasRoomForPortrait ? dialogW - 220 : dialogW - 48;
+    const dialogText = this.scene.add.text(-dialogW / 2 + (hasRoomForPortrait ? 140 : 24), -dialogH / 2 + 54, '', {
+      fontSize: screenW < 480 ? '14px' : '16px',
       color: '#ffffff',
-      wordWrap: { width: 550, useAdvancedWrap: true }
+      wordWrap: { width: wrapWidth, useAdvancedWrap: true }
     });
 
     // Buttons container
-    const buttonsContainer = this.scene.add.container(0, 50);
+    const buttonsContainer = this.scene.add.container(0, dialogH / 2 - 36);
 
     // Next button
     const nextBtn = this.createButton(-100, 0, 'Next', '#4A90E2', () => {
