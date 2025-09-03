@@ -11,23 +11,32 @@ export class GameScene extends Phaser.Scene {
   private inputManager!: InputManager;
   private scenarioCallback?: (scenarioId: string) => void;
   private interactionZones!: Phaser.Physics.Arcade.Group;
+  private worldWidth: number = 0;
+  private worldHeight: number = 0;
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
   create(): void {
-    // Set world bounds to screen size
+    // Define a world larger than the viewport for camera scrolling
     const { width, height } = this.sys.game.canvas;
-    this.physics.world.setBounds(0, 0, width, height);
+    this.worldWidth = Math.floor(width * 2);
+    this.worldHeight = Math.floor(height * 2);
+    this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
     // Create stylized campus background
-    this.createStyledCampusBackground(width, height);
+    this.createStyledCampusBackground(this.worldWidth, this.worldHeight);
 
     // Add atmospheric elements
     this.createAtmosphere();
     
     this.createPlayer();
+    
+    // Configure camera to follow the player and zoom out slightly
+    this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
+    this.cameras.main.setZoom(0.75);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.createNPCs();
     this.setupManagers();
     this.setupCollisions();
@@ -374,7 +383,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createAtmosphere(): void {
-    const { width, height } = this.sys.game.canvas;
+    const width = this.worldWidth || this.sys.game.canvas.width;
+    const height = this.worldHeight || this.sys.game.canvas.height;
     
     // Floating particles with physics
     const particles = this.add.particles(0, 0, 'tree', {
@@ -393,7 +403,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPlayer(): void {
-    const { width, height } = this.sys.game.canvas;
+    const width = this.worldWidth || this.sys.game.canvas.width;
+    const height = this.worldHeight || this.sys.game.canvas.height;
     // Spawn the player on the campus path (bottom horizontal path band)
     const tile = 16;
     const cols = Math.ceil(width / tile);
@@ -407,7 +418,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createNPCs(): void {
-    const { width, height } = this.sys.game.canvas;
+    const { width, height } = { width: this.worldWidth || this.sys.game.canvas.width, height: this.worldHeight || this.sys.game.canvas.height };
     
     const npcData = [
       {
@@ -534,6 +545,8 @@ export class GameScene extends Phaser.Scene {
     miniMap.fillRoundedRect(20, 20, 160, 110, 8);
     miniMap.lineStyle(3, 0xFF6B9D, 1);
     miniMap.strokeRoundedRect(20, 20, 160, 110, 8);
+    // Keep UI fixed on screen
+    miniMap.setScrollFactor(0);
     
     // Add minimap glow
     miniMap.lineStyle(1, 0xFFFFFF, 0.5);
@@ -546,6 +559,7 @@ export class GameScene extends Phaser.Scene {
     playerDot.lineStyle(2, 0xFFFFFF, 0.8);
     playerDot.strokeCircle(0, 0, 6);
     playerDot.setDepth(100);
+    playerDot.setScrollFactor(0);
 
     // Add pulsing animation to player dot
     this.tweens.add({
@@ -557,10 +571,12 @@ export class GameScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
-    // Update minimap
+    // Update minimap using world bounds
     this.events.on('postupdate', () => {
-      const mapX = 30 + (this.player.x / width) * 140;
-      const mapY = 30 + (this.player.y / height) * 90;
+      const worldW = this.worldWidth || width;
+      const worldH = this.worldHeight || height;
+      const mapX = 30 + (this.player.x / worldW) * 140;
+      const mapY = 30 + (this.player.y / worldH) * 90;
       playerDot.setPosition(mapX, mapY);
     });
     
@@ -573,6 +589,7 @@ export class GameScene extends Phaser.Scene {
       stroke: '#FFFFFF',
       strokeThickness: 1
     }).setOrigin(0.5).setDepth(100);
+    instructions.setScrollFactor(0);
 
     // Add floating animation to instructions
     this.tweens.add({

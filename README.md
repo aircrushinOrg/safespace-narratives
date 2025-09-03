@@ -57,7 +57,18 @@ This application features AI-powered conversations for sexual health education s
    - Approach NPCs (Alex, Jamie, Taylor, Riley) 
    - Press SPACE/ENTER to interact
    - This triggers an AI conversation where you can type your own responses
-   - The AI evaluates your conversation for sexual health education goals
+  - The AI evaluates your conversation for sexual health education goals
+
+## Art & Assets
+
+- See `docs/ART_GUIDE.md` for visual direction and the asset pipeline (Tiled maps, sprite sheets, UI).
+- Place art in `public/assets/**`:
+  - `public/assets/tiles` – tilesets/TSX
+  - `public/assets/maps` – Tiled JSON maps
+  - `public/assets/characters` – sprite sheets/atlases
+  - `public/assets/ui` – UI sprites (icons, 9-slice)
+  - `public/assets/audio` – SFX/music
+- The game currently uses generated placeholders; you can replace them incrementally without breaking the build.
 
 **Edit a file directly in GitHub**
 

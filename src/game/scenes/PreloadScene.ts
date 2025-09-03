@@ -1,6 +1,4 @@
 import Phaser from 'phaser';
-import campusBackground from '@/assets/campus-background.jpg';
-import treeImage from '@/assets/tree.png';
 
 export class PreloadScene extends Phaser.Scene {
   private loadingBar!: Phaser.GameObjects.Graphics;
@@ -86,9 +84,6 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private loadAssets(): void {
-    // Load background and environment
-    this.load.image('campus-bg', campusBackground);
-    this.load.image('tree', treeImage);
 
     // Create player spritesheet programmatically
     this.createPlayerSprites();
