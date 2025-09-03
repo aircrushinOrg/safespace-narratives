@@ -197,9 +197,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenarioId, onBack
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex min-h-0 flex-col h-safe-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border p-4 bg-card">
+      <div className="sticky top-0 z-20 border-b border-border p-4 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center space-x-3">
             <Button variant="outline" size="sm" onClick={onBack}>
@@ -219,18 +219,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenarioId, onBack
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.map((message) => (
             <div
               key={message.id}
               className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <Card className={`max-w-[80%] p-4 ${
+              <Card className={`max-w-[80%] p-3 sm:p-4 rounded-2xl ${
                 message.type === 'user' 
-                  ? 'bg-primary text-primary-foreground' 
+                  ? 'bg-primary text-primary-foreground border-transparent' 
                   : message.type === 'system'
-                  ? 'bg-accent/50 border-accent'
+                  ? 'bg-accent/40 border-accent/60'
                   : 'bg-card'
               }`}>
                 {message.character && (
@@ -247,7 +247,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenarioId, onBack
           
           {isTyping && (
             <div className="flex justify-start">
-              <Card className="p-4 bg-card">
+              <Card className="p-3 sm:p-4 bg-card rounded-2xl">
                 <div className="flex items-center space-x-2">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
@@ -265,52 +265,52 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenarioId, onBack
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-border p-4 bg-card">
-        <div className="max-w-4xl mx-auto space-y-4">
-          {/* Quick Response Options */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <div className="border-t border-border p-3 sm:p-4 bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/70 pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+          {/* Quick Response Options - horizontal chips to save space on mobile */}
+          <div className="flex gap-2 overflow-x-auto py-1 -mx-1 px-1">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setInput("I want to make sure we're both safe and comfortable.")}
-              className="text-xs text-left justify-start h-auto py-2"
+              className="shrink-0 text-xs h-8 px-3 rounded-full whitespace-nowrap"
             >
-              💡 "I want to make sure we're both safe and comfortable."
+              💡 Safe and comfortable
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setInput("Let's discuss protection and what we're both comfortable with.")}
-              className="text-xs text-left justify-start h-auto py-2"
+              className="shrink-0 text-xs h-8 px-3 rounded-full whitespace-nowrap"
             >
-              🛡️ "Let's discuss protection and boundaries."
+              🛡️ Protection & boundaries
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setInput("Maybe we should slow down and get to know each other better first.")}
-              className="text-xs text-left justify-start h-auto py-2"
+              className="shrink-0 text-xs h-8 px-3 rounded-full whitespace-nowrap"
             >
-              ⏸️ "Maybe we should take things slower."
+              ⏸️ Take it slower
             </Button>
           </div>
-          
+
           {/* Custom Input */}
-          <div className="flex space-x-2">
+          <div className="flex items-center gap-2">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your own response or click a suggestion above..."
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+              placeholder="Type a response or use a suggestion..."
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
               className="flex-1"
             />
-            <Button onClick={handleSendMessage} disabled={!input.trim() || isTyping}>
+            <Button onClick={handleSendMessage} disabled={!input.trim() || isTyping} aria-label="Send message">
               <Send className="w-4 h-4" />
             </Button>
           </div>
-          
-          <p className="text-xs text-muted-foreground text-center">
-            💡 You can use the suggestions above or type your own response. Remember: You're in control. Smart choices keep you safe.
+
+          <p className="text-[11px] text-muted-foreground text-center">
+            💡 Use a suggestion or type your own response. You’re in control.
           </p>
         </div>
       </div>
